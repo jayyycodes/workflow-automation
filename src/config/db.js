@@ -7,11 +7,14 @@ const { Pool } = pg;
  * PostgreSQL connection pool
  */
 const pool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT) || 5432,
-    database: process.env.DB_NAME || 'workflow_automation',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    ssl: process.env.DB_HOST && process.env.DB_HOST.includes('render.com')
+        ? { rejectUnauthorized: false }
+        : false,
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
