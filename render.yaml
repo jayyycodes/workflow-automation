@@ -1,0 +1,60 @@
+services:
+  # Backend API
+  - type: web
+    name: workflow-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        fromDatabase:
+          name: workflow-db
+          property: host
+      - key: DB_USER
+        fromDatabase:
+          name: workflow-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: workflow-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: workflow-db
+          property: database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+
+  # Python AI Service
+  - type: web
+    name: workflow-ai
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    rootDir: engine-py
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+
+  # Frontend
+  - type: web
+    name: workflow-frontend
+    env: node
+    buildCommand: cd Frontend/my-app && npm install && npm run build
+    startCommand: cd Frontend/my-app && npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://workflow-backend.onrender.com
+
+databases:
+  - name: workflow-db
+    databaseName: workflow_automation
+    user: workflow_user
