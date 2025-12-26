@@ -41,6 +41,8 @@ services:
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     rootDir: engine-py
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
       - key: GROQ_API_KEY
         sync: false
 
