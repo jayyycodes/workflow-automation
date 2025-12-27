@@ -190,12 +190,12 @@ OPENROUTER_API_KEY=your-openrouter-key (fallback LLM)
 
 ### GitHub Digest
 ```
-"Email me my GitHub stars summary every Monday"
+"Email me [Your_github_username] GitHub stars summary every Monday"
 ```
 
 ### HackerNews Digest
 ```
-"WhatsApp me top 10 HackerNews stories daily"
+"SMS me top 10 HackerNews stories every 5hrs"
 ```
 
 ---
@@ -304,15 +304,6 @@ MIT
 
 ---
 
-## 📧 Contact
-
-**Built for [Hackathon Name]**
-
-- Demo: [your-app.onrender.com](https://your-app.onrender.com)
-- Email: your-email@example.com
-- GitHub: [@yourusername](https://github.com/yourusername)
-
----
 
 <div align="center">
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Sparkles, Loader, Send, Zap, ArrowRight,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/auth-provider';
+import { useToast } from '@/providers/toast-provider';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
@@ -18,12 +19,24 @@ export default function CreateAutomationPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [step, setStep] = useState('input'); // 'input', 'preview', 'saving'
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, loading: authLoading } = useAuth();
+    const { success, error: showError } = useToast();
     const router = useRouter();
 
-    // Redirect if not authenticated
+    // Handle authentication redirect
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            router.push('/login');
+        }
+    }, [isAuthenticated, authLoading, router]);
+
+    // Show loading while checking auth
+    if (authLoading) {
+        return null;
+    }
+
+    // Don't render if not authenticated (will redirect)
     if (!isAuthenticated) {
-        router.push('/login');
         return null;
     }
 

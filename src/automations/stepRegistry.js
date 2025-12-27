@@ -238,6 +238,19 @@ const sendSms = async (params, context) => {
         recipientPhone = formatPhoneNumber(recipientPhone);
     }
 
+    // DIGEST CHECK FIRST!
+    const digestCheckSMS = context.stepOutputs || {};
+    const digestSMS = Object.values(digestCheckSMS).find(o => o?.digest);
+    if (digestSMS?.digest) {
+        logger.info('📱 Using web scraper digest for SMS');
+        return notify({
+            channel: 'sms',
+            ...params,
+            to: recipientPhone,
+            message: digestSMS.digest
+        }, context);
+    }
+
     // Build message with data from previous steps
     let message = params.message || 'Automation notification';
 

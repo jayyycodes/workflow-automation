@@ -1,0 +1,23 @@
+{
+    "name": "HackerNews SMS Test (Manual)",
+    "description": "Test SMS with proper formatting - use this JSON",
+    "trigger": {
+        "type": "manual"
+    },
+    "steps": [
+        {
+            "type": "scrape_hackernews",
+            "story_type": "top",
+            "count": 5
+        },
+        {
+            "type": "format_web_digest",
+            "provider": "hackernews"
+        },
+        {
+            "type": "send_sms",
+            "to": "+919423605121",
+            "message": "HackerNews digest"
+        }
+    ]
+}
