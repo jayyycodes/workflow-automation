@@ -150,7 +150,7 @@ def call_gemini(full_prompt: str) -> str:
     """Call Google Gemini API"""
     from config import GEMINI_API_KEY, GEMINI_MODEL
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
     
     headers = {
         "Content-Type": "application/json"
@@ -163,11 +163,10 @@ def call_gemini(full_prompt: str) -> str:
     }
     
     with httpx.Client(timeout=60.0) as client:
-        response = client.get(f"{url}?key={GEMINI_API_KEY}", headers=headers, json=payload)
+        response = client.post(url, headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
         return result["candidates"][0]["content"]["parts"][0]["text"]
-        raise HTTPException(status_code=500, detail=f"LLM call failed: {str(e)}")
 
 
 def build_automation_from_context(context: dict) -> dict:
