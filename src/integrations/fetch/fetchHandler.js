@@ -27,14 +27,34 @@ const marketProviders = {
             logger.info(`Auto-formatted Indian stock: ${identifier} → ${symbol}`);
         }
 
+        // Yahoo Finance with headers to avoid rate limiting on production servers
         const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`;
 
-        const response = await fetch(url);
-        if (!response.ok) {
+        let response;
+        try {
+            response = await axios.get(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json',
+                    'Referer': 'https://finance.yahoo.com/'
+                },
+                timeout: 15000
+            });
+        } catch (error) {
+            if (error.response) {
+                throw new Error(`Yahoo Finance API error: ${error.response.status} - ${error.response.statusText}`);
+            } else if (error.request) {
+                throw new Error(`Yahoo Finance API error: No response received for ${symbol}`);
+            } else {
+                throw new Error(`Yahoo Finance API error: ${error.message}`);
+            }
+        }
+
+        if (response.status !== 200) {
             throw new Error(`Yahoo Finance API error: ${response.status}`);
         }
 
-        const data = await response.json();
+        const data = response.data; // Axios automatically parses JSON
         const quote = data?.chart?.result?.[0];
 
         if (!quote) {
