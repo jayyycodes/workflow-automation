@@ -3,6 +3,7 @@ import { sendEmail as sendEmailService } from '../integrations/email/emailServic
 import { fetchData, fetchStockPrice, fetchCryptoPrice } from '../integrations/fetch/fetchHandler.js';
 import whatsappService from '../integrations/whatsapp/whatsappService.js';
 import smsService from '../integrations/sms/smsService.js';
+import webScraper from '../integrations/web/webScraperService.js';
 
 /**
  * Generic Notify Handler
@@ -96,6 +97,19 @@ const sendEmail = async (params, context) => {
         }
 
         logger.info('Using logged-in user email for notification', { email: recipientEmail });
+    }
+
+    // DIGEST CHECK FIRST!
+    const digestCheck = context.stepOutputs || {};
+    const digest = Object.values(digestCheck).find(o => o?.digest);
+    if (digest?.digest) {
+        logger.info('📧 Using web scraper digest');
+        return notify({
+            channel: 'email',
+            ...params,
+            to: recipientEmail,
+            body: digest.digest
+        }, context);
     }
 
     // Build email body with data from previous steps
@@ -442,6 +456,39 @@ const parseDuration = (duration) => {
  * Moving towards generic actions (fetch_data, notify) while maintaining
  * backward compatibility with specific actions (fetch_stock_price, send_email).
  */
+
+/**
+ * Web Scraping Steps
+ */
+const scrapeGithub = async (params) => {
+    const result = await webScraper.scrapeWeb('github', {
+        username: params.username || params.github_username,
+        repo_type: params.repo_type || 'stars'
+    });
+    logger.info('GitHub scrape completed', { username: params.username, items: result.data.items.length });
+    return result.data;
+};
+
+const scrapeHackerNews = async (params) => {
+    const result = await webScraper.scrapeWeb('hackernews', {
+        story_type: params.story_type || 'top',
+        count: params.count || 10
+    });
+    logger.info('HackerNews scrape completed', { story_type: params.story_type, items: result.data.items.length });
+    return result.data;
+};
+
+const formatWebDigest = async (params, context) => {
+    const provider = params.provider;
+    const previousStep = context.stepOutputs?.['step_1'];
+
+    if (!previousStep) {
+        throw new Error('No step_1 data');
+    }
+
+    const formatted = await webScraper.formatDigest(provider, previousStep);
+    return { digest: formatted };
+};
 const stepRegistry = {
     // Generic actions (NEW - scalable approach)
     fetch_data: fetchData,
@@ -455,6 +502,11 @@ const stepRegistry = {
     send_email: sendEmail,
     send_whatsapp: sendWhatsapp,
     send_sms: sendSms,
+
+    // Web scraping
+    scrape_github: scrapeGithub,
+    scrape_hackernews: scrapeHackerNews,
+    format_web_digest: formatWebDigest,
 
     // Utility actions
     job_search: jobSearch,

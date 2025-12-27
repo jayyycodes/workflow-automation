@@ -61,6 +61,9 @@ STEP CONFIGURATIONS:
 - fetch_stock_price: {{"type": "fetch_stock_price", "symbol": "AAPL"}}
 - fetch_crypto_price: {{"type": "fetch_crypto_price", "symbol": "BTC"}}
 - fetch_weather: {{"type": "fetch_weather", "location": "user's city name"}} **IMPORTANT: Always ask user for their city, never use "current"**
+- scrape_github: {{"type": "scrape_github", "username": "github_user", "repo_type": "stars|repos|activity"}}
+- scrape_hackernews: {{"type": "scrape_hackernews", "story_type": "top|best|new", "count": 10}}
+- format_web_digest: {{"type": "format_web_digest", "provider": "github|hackernews"}}
 - send_notification: {{"type": "send_notification", "message": "..."}}
 - send_email: {{"type": "send_email", "to": "email", "subject": "...", "body": "..."}}
 - send_whatsapp: {{"type": "send_whatsapp", "to": "+1234567890", "message": "..."}}
@@ -95,11 +98,39 @@ Output:
   "trigger": {{"type": "interval", "every": "5m"}},
   "steps": [
     {{"type": "fetch_stock_price", "symbol": "AAPL"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "AAPL Stock Update", "body": "Latest AAPL stock price update"}}
+    {{"type": "send_email", "to": "user@example.com", "subject": "AAPL Stock Update", "body": "Current AAPL price"}}
   ]
 }}
 
-Example 2 (WhatsApp):
+Example 2 (GitHub Stars - Weekly):
+Input: "Send me a summary of my GitHub stars every Monday"
+Output:
+{{
+  "name": "GitHub Stars Weekly Digest",
+  "description": "Weekly summary of starred GitHub repositories",
+  "trigger": {{"type": "interval", "every": "1w"}},
+  "steps": [
+    {{"type": "scrape_github", "username": "GITHUB_USERNAME", "repo_type": "stars"}},
+    {{"type": "format_web_digest", "provider": "github"}},
+    {{"type": "send_email", "to": "user@example.com", "subject": "Your GitHub Stars This Week", "body": "Digest below"}}
+  ]
+}}
+
+Example 3 (HackerNews Daily):
+Input: "Email me top HackerNews stories every morning"
+Output:
+{{
+  "name": "HackerNews Daily Digest",
+  "description": "Top HackerNews stories delivered daily",
+  "trigger": {{"type": "interval", "every": "1d"}},
+  "steps": [
+    {{"type": "scrape_hackernews", "story_type": "top", "count": 10}},
+    {{"type": "format_web_digest", "provider": "hackernews"}},
+    {{"type": "send_email", "to": "user@example.com", "subject": "Top HackerNews Stories", "body": "Digest below"}}
+  ]
+}}
+
+Example 4 (WhatsApp):
 Input: "WhatsApp me SBIN stock price every hour"
 Output:
 {{

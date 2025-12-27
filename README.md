@@ -1,574 +1,323 @@
-# 🟢 Smart Workflow Automation Platform
+# 🤖 Smart Workflow Automation
 
-> **AI-Powered Automation Engine with Terminal-Style Interface**
+**Transform plain English into powerful automations with AI**
 
-A full-stack workflow automation platform that converts natural language descriptions into executable automations. Built with Node.js, Next.js, PostgreSQL, and Python AI services.
-
-## ✨ Features
-
-### 🤖 AI-Powered Automation Generation
-- **Natural Language Processing**: Describe workflows in plain English
-- **Intelligent Step Extraction**: AI identifies required steps and data sources
-- **Visual Workflow Preview**: See generated automation before saving
-- **Context-Aware**: Understands stock prices, notifications, scheduling, and more
-
-### 🎨 Terminal-Style UI
-- **Matrix/Hacker Aesthetic**: Dark green monospace terminal theme
-- **Scanline Effects**: Authentic CRT monitor feel
-- **Terminal Commands**: Interface styled like a command-line terminal
-- **Responsive Design**: Works on desktop and mobile
-
-### 🔄 Automation Management
-- **Real-time Execution**: Run automations manually or on schedule
-- **Status Tracking**: Active, Paused, or Draft states
-- **Execution History**: View detailed results and logs
-- **Immediate First Run**: Automations execute immediately when activated
-
-### 📱 Multi-Channel Notifications
-- **Email**: SMTP integration for email notifications
-- **WhatsApp**: Twilio WhatsApp sandbox support
-- **SMS**: Twilio SMS notifications with international phone support
-- **Smart Routing**: Automatically uses available channels
-
-### 🔐 Security & Authentication
-- **JWT Authentication**: Secure token-based auth
-- **Password Hashing**: bcrypt for password security
-- **Email Validation**: Prevents fake email addresses
-- **Phone Verification**: International format validation
-- **Protected Routes**: Role-based access control
+[![Powered by Google Gemini](https://img.shields.io/badge/Powered%20by-Google%20Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-00C853?style=for-the-badge)](https://your-render-url.onrender.com)
 
 ---
 
-## 🚀 Quick Start
+## ✨ What Is This?
+
+Smart Workflow Automation lets you create complex automations using **plain English**. Powered by Google Gemini AI, it understands your intent and builds workflows automatically.
+
+### Just say:
+- _"Email me top HackerNews stories every morning"_ → ✅ Done
+- _"Send me AAPL stock price updates every 5 minutes"_ → ✅ Done  
+- _"Notify me about weather in Mumbai daily at 8 AM"_ → ✅ Done
+
+No coding required. Just natural language.
+
+---
+
+## 🎯 Live Demo
+
+![HackerNews Email](./docs/hackernews-email-demo.png)
+*Actual email generated automatically - beautifully formatted HackerNews digest*
+
+**Try it yourself:** [Live App](https://your-render-url.onrender.com)
+
+---
+
+## 🚀 Features
+
+### 🤖 **AI-Powered Workflow Generation**
+- **Google Gemini** as primary LLM (OpenRouter fallback)
+- Natural language → JSON workflows
+- Smart entity extraction
+- Context-aware clarification
+
+### 📊 **Real-Time Data Integrations**
+- **Stock Prices**: Yahoo Finance
+- **Weather**: OpenWeatherMap
+- **Web Scraping**: HackerNews, GitHub
+- **Notifications**: Email (SendGrid), SMS, WhatsApp
+
+### ⚡ **Production-Ready Architecture**
+- **Adapter Pattern** for web scraping (easily add Twitter, Reddit, etc.)
+- **Cron Scheduling** for recurring automations
+- **PostgreSQL** for data persistence
+- **Deployed on Render** (live production app!)
+
+### 🎨 **Beautiful Terminal UI**
+- Hacker/terminal theme
+- Responsive design
+- Real-time execution status
+- Framer Motion animations
+
+---
+
+## 🛠️ Tech Stack
+
+**Frontend:**
+- Next.js 14 (App Router)
+- React
+- TailwindCSS
+- Framer Motion
+
+**Backend (Node.js):**
+- Express.js
+- PostgreSQL
+- Node-cron (scheduling)
+- Axios (HTTP)
+
+**Backend (Python AI):**
+- FastAPI
+- Google Gemini API
+- OpenRouter API
+
+**Integrations:**
+- SendGrid (email)
+- Yahoo Finance (stocks)
+- OpenWeatherMap (weather)
+- GitHub API
+- HackerNews API
+
+---
+
+## 📸 Screenshots
+
+### Dashboard
+![Dashboard](./docs/dashboard.png)
+
+### Automation Creation
+![Create Automation](./docs/create-automation.png)
+
+### Email Results
+![Email Result](./docs/email-result.png)
+
+---
+
+## 🏃 Quick Start
 
 ### Prerequisites
-
-- **Node.js** 18+ 
-- **PostgreSQL** 14+
-- **Python** 3.9+ (for AI service)
-- **Twilio Account** (for notifications)
+- Node.js 18+
+- Python 3.9+
+- PostgreSQL
+- Accounts: SendGrid, Google AI Studio, OpenRouter (optional)
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone <repository-url>
+# 1. Clone repository
+git clone https://github.com/yourusername/workflow-automation.git
 cd workflow-automation
 
-# Install backend dependencies
+# 2. Install dependencies
 npm install
+cd engine-py && pip install -r requirements.txt && cd ..
 
-# Install frontend dependencies
-cd Frontend/my-app
-npm install
-cd ../..
+# 3. Set up environment variables
+cp .env.example .env
+cp engine-py/.env.example engine-py/.env
+# Edit .env files with your API keys
 
-# Install Python dependencies
-cd engine-py
-pip install -r requirements.txt
-cd ..
+# 4. Set up database
+npm run db:setup
+
+# 5. Start services
+npm start              # Node.js backend (port 5000)
+npm run dev:frontend   # Next.js frontend (port 3000)
+npm run dev:ai         # Python AI service (port 8000)
 ```
 
-### Environment Configuration
+### Environment Variables
 
-1. **Backend (`./env`):**
 ```env
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=workflow_automation
-DB_USER=postgres
-DB_PASSWORD=your_password
+# Required
+DATABASE_URL=postgresql://user:password@localhost:5432/workflow_db
+JWT_SECRET=your-secret-key
+SENDGRID_API_KEY=your-sendgrid-key
+GEMINI_API_KEY=your-gemini-key
 
-# JWT
-JWT_SECRET=your-secret-key-min-32-chars
-
-# Email (SMTP)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
-
-# Twilio (Notifications)
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_PHONE_NUMBER=+1234567890
-TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
-
-# External APIs
-STOCK_API_KEY=your_alpha_vantage_key
-```
-
-2. **Frontend (`Frontend/my-app/.env.local`):**
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
-```
-
-3. **Python AI Service (`engine-py/.env`):**
-```env
-GROQ_API_KEY=your_groq_api_key
-```
-
-### Database Setup
-
-```bash
-# Create database
-psql -U postgres -c "CREATE DATABASE workflow_automation;"
-
-# Initialize tables
-npm run db:init
-```
-
-### Running the Application
-
-```bash
-# Terminal 1 - Backend Server
-npm run dev
-# Runs on http://localhost:3000
-
-# Terminal 2 - Frontend
-cd Frontend/my-app
-npm run dev
-# Runs on http://localhost:3001
-
-# Terminal 3 - Python AI Service
-cd engine-py
-uvicorn app:app --reload --port 8000
-# Runs on http://localhost:8000
+# Optional
+GITHUB_TOKEN=your-github-token (for higher rate limits)
+OPENWEATHER_API_KEY=your-weather-key
+OPENROUTER_API_KEY=your-openrouter-key (fallback LLM)
 ```
 
 ---
 
-## 📁 Project Structure
+## 🎬 How It Works
 
+1. **User Input**: "Email me top 5 HackerNews stories daily"
+
+2. **AI Processing** (Google Gemini):
+   ```json
+   {
+     "name": "HackerNews Daily Digest",
+     "trigger": {"type": "interval", "every": "1d"},
+     "steps": [
+       {"type": "scrape_hackernews", "story_type": "top", "count": 5},
+       {"type": "format_web_digest", "provider": "hackernews"},
+       {"type": "send_email", "subject": "Top HackerNews Stories"}
+     ]
+   }
+   ```
+
+3. **Execution** (Workflow Engine):
+   - Scrapes HackerNews API
+   - Formats as beautiful digest
+   - Sends via SendGrid
+
+4. **Scheduling** (Node-cron):
+   - Runs every day automatically
+   - Stores execution history
+
+---
+
+## 🌟 Example Automations
+
+### Stock Monitoring
 ```
-workflow-automation/
-├── src/                          # Backend (Node.js/Express)
-│   ├── index.js                  # Express app entry
-│   ├── config/
-│   │   └── db.js                 # PostgreSQL connection
-│   ├── controllers/
-│   │   ├── authController.js     # Authentication logic
-│   │   └── automationController.js
-│   ├── middleware/
-│   │   ├── auth.js               # JWT verification
-│   │   └── errorHandler.js
-│   ├── models/
-│   │   ├── User.js               # User model (with phone fields)
-│   │   ├── Automation.js
-│   │   └── Execution.js
-│   ├── routes/
-│   │   ├── auth.js               # /auth/register, /auth/login, /auth/me
-│   │   ├── automations.js
-│   │   └── user.js
-│   ├── services/
-│   │   ├── authService.js
-│   │   ├── emailService.js
-│   │   └── twilioService.js
-│   ├── automations/
-│   │   ├── stepRegistry.js       # Step implementations
-│   │   └── workflowExecutor.js   # Execution engine
-│   ├── scheduler/
-│   │   └── scheduler.js          # Cron-based scheduling
-│   ├── integrations/
-│   │   └── stockApiService.js    # Stock price API
-│   └── scripts/
-│       ├── initDb.js             # Database initialization
-│       ├── checkUsers.js
-│       └── deleteAllUsers.js
-│
-├── Frontend/my-app/              # Frontend (Next.js 15)
-│   ├── app/
-│   │   ├── page.js               # Landing page (terminal theme)
-│   │   ├── login/page.js         # Login page
-│   │   ├── register/page.js      # Registration page
-│   │   ├── dashboard/
-│   │   │   ├── layout.js         # Dashboard sidebar layout
-│   │   │   ├── page.js           # Automation list
-│   │   │   └── create/page.js    # AI automation creator
-│   │   └── globals.css           # Global styles (terminal theme)
-│   ├── components/
-│   │   ├── ui/                   # Reusable UI components
-│   │   └── features/
-│   │       └── automation-card.js # Automation card component
-│   ├── providers/
-│   │   └── auth-provider.js      # Auth context
-│   └── lib/
-│       └── api.js                # API client
-│
-└── engine-py/                    # Python AI Service
-    ├── app.py                    # FastAPI server
-    ├── prompts.py                # LLM prompts for workflow generation
-    └── requirements.txt
+"Notify me when AAPL stock goes above $200"
+```
+
+### Weather Alerts
+```
+"Send me Mumbai weather every morning at 8 AM"
+```
+
+### GitHub Digest
+```
+"Email me my GitHub stars summary every Monday"
+```
+
+### HackerNews Digest
+```
+"WhatsApp me top 10 HackerNews stories daily"
 ```
 
 ---
 
-## � API Documentation
+## 🏗️ Architecture
 
-### Authentication
-
-#### `POST /auth/register`
-Register a new user with email validation and required phone number.
-
-**Request:**
-```json
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "securepass123",
-  "whatsappNumber": "+919876543210"
-}
 ```
-
-**Response:**
-```json
-{
-  "message": "User registered successfully",
-  "user": {
-    "id": 1,
-    "email": "john@example.com",
-    "name": "John Doe"
-  },
-  "token": "eyJhbGc..."
-}
-```
-
-#### `POST /auth/login`
-Login with email and password.
-
-#### `GET /auth/me`
-Get current authenticated user (requires Bearer token).
-
-### Automations
-
-#### `POST /automations`
-Create a new automation.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request:**
-```json
-{
-  "name": "Daily Stock Alert",
-  "description": "Send SBIN stock price via SMS daily at 9 AM",
-  "trigger": {
-    "type": "interval",
-    "config": { "every": "1d" }
-  },
-  "steps": [
-    {
-      "type": "fetch_stock_price",
-      "symbol": "SBIN.NS"
-    },
-    {
-      "type": "send_sms",
-      "message": "SBIN Price: {{price}}"
-    }
-  ],
-  "status": "draft"
-}
-```
-
-#### `GET /automations`
-List all user automations.
-
-#### `GET /automations/:id`
-Get automation by ID.
-
-#### `POST /automations/:id/run`
-Manually trigger automation execution.
-
-#### `PATCH /automations/:id/status`
-Update automation status (active/paused).
-
-**Request:**
-```json
-{
-  "status": "active"
-}
-```
-
-#### `GET /automations/:id/executions`
-Get execution history for an automation.
-
-### AI Generation
-
-#### `POST /generate`
-Generate automation from natural language (Python service).
-
-**Request:**
-```json
-{
-  "description": "Send me AAPL stock price via email every morning at 9 AM"
-}
-```
-
-**Response:**
-```json
-{
-  "automation": {
-    "name": "AAPL Stock Price Email",
-    "description": "Send AAPL stock price via email at 9 AM daily",
-    "trigger": {
-      "type": "interval",
-      "config": { "every": "1d" }
-    },
-    "steps": [
-      {
-        "type": "fetch_stock_price",
-        "symbol": "AAPL",
-        "description": "Fetch current AAPL stock price"
-      },
-      {
-        "type": "send_email",
-        "subject": "AAPL Stock Price Update",
-        "body": "Current AAPL price: {{price}}",
-        "description": "Send email with stock price"
-      }
-    ]
-  }
-}
+┌─────────────────┐
+│   Next.js UI    │
+└────────┬────────┘
+         │
+         ↓
+┌─────────────────┐      ┌──────────────┐
+│  Node.js API    │─────→│  PostgreSQL  │
+└────────┬────────┘      └──────────────┘
+         │
+         ├──→ Scheduler (node-cron)
+         │
+         ├──→ Step Executors
+         │    ├─ Stock Fetcher
+         │    ├─ Weather Fetcher
+         │    ├─ Web Scraper
+         │    └─ Email Sender
+         │
+         └──→ Python AI Service
+              └─ Google Gemini
 ```
 
 ---
 
-## 🎯 Supported Automation Steps
+## 🔥 Production Deployment
 
-### Data Fetching
-- **`fetch_stock_price`**: Get real-time stock prices (Alpha Vantage)
-  - `symbol`: Stock ticker (e.g., "AAPL", "SBIN.NS")
+### Deploy to Render
 
-### Notifications
-- **`send_email`**: Send email via SMTP
-  - `to`, `subject`, `body`
-- **`send_whatsapp`**: Send WhatsApp message via Twilio
-  - `to`, `message`
-- **`send_sms`**: Send SMS via Twilio
-  - `to`, `message`
-- **`notify`**: Smart routing (auto-selects best channel)
-  - `message`, `channel` (optional)
+**Prerequisites:**
+- Render account
+- GitHub repository
 
-### Triggers
-- **`interval`**: Run on schedule
-  - Config: `{ "every": "5m" | "1h" | "1d" }`
-- **`manual`**: Run on-demand only
+**Steps:**
 
----
+1. **Push to GitHub**:
+   ```bash
+   git push origin main
+   ```
 
-## 🎨 Terminal Theme
+2. **Create Render Services**:
+   - **Node.js Backend**: 
+     - Build: `npm install`  
+     - Start: `npm start`
+   - **Python AI**: 
+     - Build: `pip install -r requirements.txt`
+     - Start: `uvicorn app:app --host 0.0.0.0 --port 8000`
+   - **Frontend**:
+     - Build: `cd Frontend/my-app && npm install && npm run build`
+     - Start: `npm start`
 
-The entire UI uses a **Matrix/Hacker terminal aesthetic**:
+3. **Set Environment Variables** in Render dashboard
 
-### Design Elements
-- **Color Palette**: Dark green (#22c55e, #16a34a, #15803d) on black
-- **Typography**: Monospace fonts throughout (`font-mono`)
-- **Effects**: Scanline CRT overlay, green glows, terminal borders
-- **Commands**: Terminal-style prompts (`>`, `$`, `//`)
-
-### Pages
-- **Landing**: Terminal-style hero with command prompts
-- **Login/Register**: `user.login()`, `create_account()`
-- **Dashboard**: `> automations.list()`, sidebar with terminal nav
-- **Create**: `> automation.create()` with AI generation
+4. **Deploy** - Render auto-deploys on git push!
 
 ---
 
-## � Security Features
+## 📦 Web Scraping Architecture
 
-1. **Authentication**
-   - JWT tokens with secure secrets
-   - bcrypt password hashing (10 rounds)
-   - Token expiration (24 hours)
+Production-grade adapter pattern for easy extensibility:
 
-2. **Validation**
-   - Email format and fake domain detection
-   - International phone number validation
-   - Required fields enforcement
-   - SQL injection prevention (parameterized queries)
-
-3. **Authorization**
-   - User ownership verification on all resources
-   - Protected API routes
-   - No sensitive data in client responses
-
----
-
-## 📊 Database Schema
-
-### Users
-```sql
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    name VARCHAR(255),
-    phone_number VARCHAR(20),
-    whatsapp_number VARCHAR(20),
-    created_at TIMESTAMP DEFAULT NOW()
-);
+```javascript
+src/integrations/web/
+├── webScraperService.js       // Main orchestrator
+├── adapters/
+│   ├── githubAdapter.js       // GitHub API
+│   ├── hackerNewsAdapter.js   // HackerNews API
+│   └── twitterAdapter.js      // (Coming soon)
 ```
 
-### Automations
-```sql
-CREATE TABLE automations (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    trigger JSONB NOT NULL,
-    steps JSONB NOT NULL,
-    status VARCHAR(50) DEFAULT 'draft',
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### Executions
-```sql
-CREATE TABLE executions (
-    id SERIAL PRIMARY KEY,
-    automation_id INTEGER REFERENCES automations(id) ON DELETE CASCADE,
-    status VARCHAR(50) DEFAULT 'pending',
-    steps_data JSONB,
-    error TEXT,
-    started_at TIMESTAMP DEFAULT NOW(),
-    completed_at TIMESTAMP
-);
-```
-
----
-
-## 🧪 Testing
-
-### Manual Testing
-
-```bash
-# Health check
-curl http://localhost:3000/health
-
-# Register user
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Test User",
-    "email": "test@example.com",
-    "password": "password123",
-    "whatsappNumber": "+919876543210"
-  }'
-
-# Login
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "password123"
-  }'
-
-# Create automation (use token from login)
-curl -X POST http://localhost:3000/automations \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Test Automation",
-    "description": "Test description",
-    "trigger": {"type": "manual"},
-    "steps": [{"type": "send_email", "subject": "Test"}],
-    "status": "draft"
-  }'
-```
-
----
-
-## �️ Troubleshooting
-
-### Common Issues
-
-1. **Database connection failed**
-   - Check PostgreSQL is running
-   - Verify credentials in `.env`
-   - Ensure database exists
-
-2. **Twilio errors**
-   - Verify `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`
-   - Check `TWILIO_PHONE_NUMBER` format (+1234567890)
-   - For WhatsApp: Join sandbox first
-
-3. **AI generation not working**
-   - Check Python service is running (port 8000)
-   - Verify `GROQ_API_KEY` is set
-   - Check `NEXT_PUBLIC_API_URL` in frontend
-
-4. **Frontend not connecting**
-   - Check `NEXT_PUBLIC_API_URL` matches backend URL
-   - Verify CORS is enabled
-   - Check browser console for errors
-
----
-
-## 📝 Scripts
-
-```bash
-# Database
-npm run db:init          # Initialize database tables
-npm run migrate:phone    # Add phone number columns
-npm run check:users      # Display all users
-
-# Development
-npm run dev             # Start backend server
-npm run frontend        # Start frontend (in Frontend/my-app)
-
-# User Management
-node src/scripts/deleteAllUsers.js  # Delete all users (CAUTION)
-```
-
----
-
-## 🎯 Roadmap
-
-### Completed ✅
-- [x] Natural language automation generation
-- [x] Terminal-style UI theme
-- [x] Email notifications (SMTP)
-- [x] WhatsApp integration (Twilio)
-- [x] SMS notifications (Twilio)
-- [x] Stock price API integration
-- [x] Cron-based scheduling
-- [x] Execution history tracking
-- [x] User authentication & authorization
-- [x] Responsive mobile design
-
-### Planned 🔮
-- [ ] Voice input support
-- [ ] Webhook triggers
-- [ ] More data source integrations
-- [ ] Automation templates library
-- [ ] Team collaboration features
-- [ ] Advanced scheduling (specific times)
-- [ ] Conditional logic in workflows
-- [ ] Custom code steps (JavaScript/Python)
-
----
-
-## 📄 License
-
-ISC
+**Add new scraper in 3 steps:**
+1. Create adapter file
+2. Implement `fetch()` and `formatDigest()`
+3. Register in `webScraperService.js`
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome! Areas to explore:
+- [ ] Twitter/X integration
+- [ ] Reddit scraper
+- [ ] Slack notifications
+- [ ] Discord webhooks
+- [ ] Calendar integration (Google Calendar)
 
 ---
 
-## 📧 Support
+## 📄 License
 
-For issues and questions, please open an issue on GitHub.
+MIT
 
 ---
 
-**Built with ❤️ using Node.js, Next.js, PostgreSQL, Python, and AI**
+## 🙏 Acknowledgments
+
+- **Google Gemini** - Primary AI engine
+- **OpenRouter** - Fallback LLM provider
+- **SendGrid** - Reliable email delivery
+- **Render** - Seamless deployment
+
+---
+
+## 📧 Contact
+
+**Built for [Hackathon Name]**
+
+- Demo: [your-app.onrender.com](https://your-app.onrender.com)
+- Email: your-email@example.com
+- GitHub: [@yourusername](https://github.com/yourusername)
+
+---
+
+<div align="center">
+
+**⚡ Transform plain English into powerful automations ⚡**
+
+[![Powered by Google Gemini](https://img.shields.io/badge/Powered%20by-Google%20Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
+
+</div>

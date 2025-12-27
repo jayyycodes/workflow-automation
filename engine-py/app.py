@@ -7,6 +7,7 @@ Includes multi-turn clarification for incomplete requests.
 
 import json
 import re
+import logging
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +29,10 @@ app = FastAPI(
     description="Python service for AI-powered automation generation using Gemini",
     version="0.3.0"
 )
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # CORS for Node.js backend and frontend communication
 app.add_middleware(
@@ -93,33 +98,49 @@ def extract_json_from_response(text: str) -> dict:
         raise ValueError(f"Failed to parse JSON: {e}")
 
 
-def call_llm(prompt: str, user_text: str) -> str:
+def call_llm(full_prompt: str) -> str:
     """
-    Call LLM API with fallback mechanism.
-    Tries OpenRouter first, falls back to Gemini if it fails.
+    Call LLM to generate automation from natural language.
+    Tries Google Gemini first (primary), falls back to OpenRouter.
     """
-    full_prompt = f"{prompt}\n\nUser request: {user_text}"
+    gemini_error = None
+    openrouter_error = None
     
-    # Try OpenRouter first
-    if OPENROUTER_API_KEY:
-        try:
-            return call_openrouter(full_prompt)
-        except Exception as e:
-            print(f"OpenRouter failed: {e}, trying Gemini fallback...")
-    
-    # Fallback to Gemini
+    # Try Google Gemini FIRST - showcase Google AI for hackathon!
     if GEMINI_API_KEY:
         try:
-            return call_gemini(full_prompt)
+            logger.info("🤖 Using Google Gemini AI (Primary)")
+            result = call_gemini(full_prompt)
+            logger.info("✅ Gemini successfully generated automation")
+            return result
         except Exception as e:
+            gemini_error = str(e)
+            logger.warning(f"⚠️ Gemini failed: {gemini_error}, trying OpenRouter fallback...")
+    else:
+        gemini_error = "GEMINI_API_KEY not set"
+        logger.info("Gemini API key not configured, skipping Gemini.")
+        
+    # Fallback to OpenRouter if Gemini fails or not configured
+    if OPENROUTER_API_KEY:
+        try:
+            logger.info("🔄 Using OpenRouter (Fallback)")
+            result = call_openrouter(full_prompt)
+            logger.info("✅ OpenRouter successfully generated automation")
+            return result
+        except Exception as e:
+            openrouter_error = str(e)
+            logger.error(f"❌ Both LLM providers failed - Gemini: {gemini_error}, OpenRouter: {openrouter_error}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Both LLM providers failed. OpenRouter and Gemini unavailable: {str(e)}"
+                detail="AI service temporarily unavailable. Please try again."
             )
-    
+    else:
+        openrouter_error = "OPENROUTER_API_KEY not set"
+        logger.error("❌ OpenRouter API key not configured.")
+        
     raise HTTPException(
         status_code=500,
-        detail="No LLM API keys configured. Set OPENROUTER_API_KEY or GEMINI_API_KEY"
+        detail=f"No LLM API keys configured or both failed. Gemini: {gemini_error}, OpenRouter: {openrouter_error}"
     )
 
 
@@ -244,7 +265,8 @@ async def parse_intent(request: TextRequest):
     Parse user text into structured intent.
     """
     try:
-        response_text = call_llm(PARSE_INTENT_PROMPT, request.text)
+        full_prompt = f"{PARSE_INTENT_PROMPT}\n\nUser request: {request.text}"
+        response_text = call_llm(full_prompt)
         result = extract_json_from_response(response_text)
         
         return {
@@ -320,7 +342,8 @@ async def conversation(request: ConversationRequest):
                 }
         
         # First turn - parse intent and extract entities
-        response_text = call_llm(ENTITY_EXTRACTION_PROMPT, request.text)
+        full_prompt = f"{ENTITY_EXTRACTION_PROMPT}\n\nUser request: {request.text}"
+        response_text = call_llm(full_prompt)
         extracted = extract_json_from_response(response_text)
         
         intent = extracted.get("intent", "stock_monitor")
@@ -372,7 +395,8 @@ async def generate_automation(request: TextRequest):
     (Original endpoint - kept for backwards compatibility)
     """
     try:
-        response_text = call_llm(GENERATE_AUTOMATION_PROMPT, request.text)
+        full_prompt = f"{GENERATE_AUTOMATION_PROMPT}\n\nUser request: {request.text}"
+        response_text = call_llm(full_prompt)
         automation = extract_json_from_response(response_text)
         
         if "error" in automation:

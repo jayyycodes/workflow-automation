@@ -30,18 +30,19 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 # Allowed steps registry (ANTI-HALLUCINATION)
 # The LLM can ONLY use these step types
 ALLOWED_STEPS = [
-    "fetch_stock_price",
-    "fetch_crypto_price",
-    "fetch_weather",
-    "send_notification",
-    "send_email",
-    "send_whatsapp",
-    "send_sms",
-    "job_search",
-    "job_apply",
-    "fetch_url",
-    "condition",
-    "delay"
+    'fetch_weather',
+    'fetch_stock_price', 
+    'fetch_crypto_price',
+    'scrape_github',
+    'scrape_hackernews',
+    'format_web_digest',
+    'send_email',
+    'send_sms',
+    'send_whatsapp',
+    'send_notification',
+    'notify',
+    'condition',
+    'delay'
 ]
 
 # Allowed trigger types

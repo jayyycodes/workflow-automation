@@ -11,6 +11,7 @@ import { MouseGlow } from '@/components/ui/mouse-glow';
 
 export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { scrollYProgress } = useScroll();
   const scaleProgress = useSpring(scrollYProgress, {
     stiffness: 100,
@@ -117,11 +118,12 @@ export default function LandingPage() {
               {/* Mobile Menu Button */}
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setMounted(!mounted)}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="md:hidden p-2 rounded-lg border border-green-700 text-green-400 hover:bg-green-900/30 transition"
+                aria-label="Toggle mobile menu"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {mounted ? (
+                  {mobileMenuOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   ) : (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -131,7 +133,7 @@ export default function LandingPage() {
             </div>
 
             {/* Mobile Menu */}
-            {mounted && (
+            {mobileMenuOpen && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -222,6 +224,19 @@ export default function LandingPage() {
               </motion.div>
             </motion.div>
 
+            {/* Powered by Google Gemini Badge */}
+            <motion.div
+              variants={itemVariants}
+              className="mt-6 flex items-center justify-center gap-2 text-green-400/70"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
+              </svg>
+              <span className="text-sm font-mono">
+                Powered by <span className="font-semibold text-green-400">Google Gemini AI</span>
+              </span>
+            </motion.div>
+
             {/* Visual Placeholder with Floating Animation */}
             <motion.div
               variants={floatingVariants}
@@ -272,11 +287,10 @@ export default function LandingPage() {
               <h3 className="text-2xl sm:text-3xl font-bold mb-6 text-red-500 break-words">automation_shouldn<wbr />t_be_this_hard()</h3>
               <div className="space-y-4">
                 {[
-                  'Manual scripts for everything',
-                  'Brittle hard-coded logic',
-                  'Fragmented cron jobs',
-                  'Disposable one-off automations',
-                  'Overcomplicated simple tasks'
+                  'Brittle shell scripts',
+                  'Fragmented cron orchestration',
+                  'Disposable one-off hacks',
+                  'Non-compositional workflows'
                 ].map((pain, i) => (
                   <motion.div
                     key={i}
@@ -426,47 +440,32 @@ export default function LandingPage() {
               {
                 icon: <Brain className="w-6 h-6" />,
                 title: 'natural_language_input',
-                description: 'English → Executable steps'
+                description: 'English → Executable workflows'
               },
               {
                 icon: <GitBranch className="w-6 h-6" />,
-                title: 'visual_workflow_builder',
+                title: 'visual_composition',
                 description: 'Compose visually. Deploy instantly.'
               },
               {
                 icon: <Clock className="w-6 h-6" />,
-                title: 'smart_scheduling',
-                description: 'Cron, webhooks, events, manual'
+                title: 'temporal_scheduling',
+                description: 'Cron, webhooks, intervals, manual'
               },
               {
                 icon: <Mail className="w-6 h-6" />,
-                title: 'email_automation',
-                description: 'Full SMTP/IMAP orchestration'
+                title: 'multi_channel_delivery',
+                description: 'Email, SMS, WhatsApp orchestration'
               },
               {
                 icon: <Database className="w-6 h-6" />,
-                title: 'api_integration',
-                description: 'Universal REST. Auth + retries built-in.'
-              },
-              {
-                icon: <Bot className="w-6 h-6" />,
-                title: 'ai_agents',
-                description: 'Embedded intelligence. Autonomous decisions.'
-              },
-              {
-                icon: <Code className="w-6 h-6" />,
-                title: 'custom_code_steps',
-                description: 'JS/Python escape hatch. Full control.'
-              },
-              {
-                icon: <Bell className="w-6 h-6" />,
-                title: 'smart_notifications',
-                description: 'Multi-channel alerts. Instant delivery.'
+                title: 'universal_integration',
+                description: 'REST APIs, web scraping, data feeds'
               },
               {
                 icon: <Zap className="w-6 h-6" />,
-                title: 'production_ready',
-                description: 'Scale-tested. Observable. Resilient.'
+                title: 'production_grade',
+                description: 'Observable, resilient, scalable'
               }
             ].map((feature, i) => (
               <motion.div
@@ -600,24 +599,24 @@ export default function LandingPage() {
           >
             {[
               {
-                title: 'ai_first_approach',
-                description: 'Intent → Implementation. AI architects optimal workflows.',
-                comparison: 'vs. manual_configuration_everywhere'
+                title: 'ai_first_architecture',
+                description: 'Intent → Implementation. Zero manual configuration.',
+                comparison: 'vs. brittle_hardcoded_logic'
               },
               {
-                title: 'intent_driven_design',
-                description: 'Declare outcomes. System handles mechanics.',
-                comparison: 'vs. imperative_step_building'
+                title: 'declarative_synthesis',
+                description: 'Describe outcomes. AI orchestrates execution.',
+                comparison: 'vs. imperative_step_by_step'
               },
               {
-                title: 'developer_friendly',
-                description: 'Full API. Custom code. Version control. Testing primitives.',
-                comparison: 'vs. constrained_no_code'
+                title: 'universal_extensibility',
+                description: 'Natural language for humans. Full API for developers.',
+                comparison: 'vs. constrained_walled_gardens'
               },
               {
-                title: 'non_technical_friendly',
-                description: 'Progressive disclosure. Natural → Visual → Code.',
-                comparison: 'vs. all_or_nothing_complexity'
+                title: 'production_first',
+                description: 'Observable, resilient, scalable from day one.',
+                comparison: 'vs. mvp_technical_debt'
               }
             ].map((item, i) => (
               <motion.div
