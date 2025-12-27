@@ -1,55 +1,36 @@
 /**
- * Email Service
+ * Email Service - SendGrid API
  * 
- * Sends real emails using nodemailer with SMTP configuration.
- * Part of Step 5: Email Integration
+ * Uses SendGrid API instead of SMTP to avoid port blocking on Render.
  */
 
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import logger from '../../utils/logger.js';
 
-/**
- * Create nodemailer transporter based on environment configuration
- */
-const createTransporter = () => {
-    const config = {
-        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.EMAIL_PORT) || 587,
-        secure: process.env.EMAIL_PORT === '465', // true for 465, false for other ports
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-        },
-        // Add timeouts to prevent hanging in production
-        connectionTimeout: 30000, // 30 seconds
-        greetingTimeout: 30000,
-        socketTimeout: 60000, // 60 seconds
-        pool: true,
-        maxConnections: 5
-    };
+// Initialize SendGrid
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@example.com';
 
-    logger.debug('Creating email transporter', {
-        host: config.host,
-        port: config.port,
-        user: config.auth.user ? '***configured***' : 'NOT SET'
-    });
-
-    return nodemailer.createTransport(config);
-};
+if (SENDGRID_API_KEY) {
+    sgMail.setApiKey(SENDGRID_API_KEY);
+    logger.info('SendGrid initialized successfully');
+} else {
+    logger.warn('SENDGRID_API_KEY not configured - email sending will fail');
+}
 
 /**
- * Send an email
+ * Send an email using SendGrid API
  * 
  * @param {Object} options - Email options
  * @param {string} options.to - Recipient email address
  * @param {string} options.subject - Email subject
- * @param {string} options.body - Email body (plain text)
- * @returns {Promise<Object>} - Send result with messageId
+ * @param {string} options.body - Email body (plain text or HTML)
+ * @returns {Promise<Object>} - Send result
  */
 export const sendEmail = async ({ to, subject, body }) => {
     // Validate required fields
     if (!to) {
-        throw new Error('Email recipient (to) is required');
+        throw new Error('Recipient email (to) is required');
     }
     if (!subject) {
         throw new Error('Email subject is required');
@@ -58,46 +39,62 @@ export const sendEmail = async ({ to, subject, body }) => {
         throw new Error('Email body is required');
     }
 
-    // Check if email credentials are configured
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        throw new Error('Email credentials not configured. Set EMAIL_USER and EMAIL_PASS in .env');
+    if (!SENDGRID_API_KEY) {
+        throw new Error('SENDGRID_API_KEY environment variable is not set');
     }
 
-    const transporter = createTransporter();
-    const from = process.env.EMAIL_FROM || process.env.EMAIL_USER;
-
-    const mailOptions = {
-        from,
-        to,
-        subject,
-        text: body
-    };
-
-    logger.info('Sending email', { to, subject });
+    logger.info('Sending email via SendGrid', {
+        to: to,
+        subject: subject,
+        from: EMAIL_FROM
+    });
 
     try {
-        const result = await transporter.sendMail(mailOptions);
+        const msg = {
+            to: to,
+            from: EMAIL_FROM,
+            subject: subject,
+            text: body,
+            html: body.replace(/\n/g, '<br>') // Convert newlines to HTML breaks
+        };
 
-        logger.info('Email sent successfully', {
-            messageId: result.messageId,
-            to,
-            subject
+        const result = await sgMail.send(msg);
+
+        logger.info('Email sent successfully via SendGrid', {
+            to: to,
+            subject: subject,
+            statusCode: result[0].statusCode
         });
 
         return {
             success: true,
-            messageId: result.messageId,
-            accepted: result.accepted,
-            rejected: result.rejected
+            messageId: result[0].headers['x-message-id'],
+            to: to,
+            subject: subject,
+            provider: 'sendgrid',
+            timestamp: new Date().toISOString()
         };
+
     } catch (error) {
-        logger.error('Failed to send email', {
-            to,
-            subject,
-            error: error.message
+        logger.error('Failed to send email via SendGrid', {
+            to: to,
+            subject: subject,
+            error: error.message,
+            code: error.code,
+            response: error.response?.body
         });
-        throw new Error(`Failed to send email: ${error.message}`);
+
+        throw new Error(`Email send failed: ${error.message}`);
     }
 };
 
-export default { sendEmail };
+/**
+ * Test email configuration
+ */
+export const testEmailConfig = () => {
+    return {
+        configured: !!SENDGRID_API_KEY,
+        provider: 'sendgrid',
+        from: EMAIL_FROM
+    };
+};
