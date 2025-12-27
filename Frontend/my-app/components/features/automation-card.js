@@ -95,7 +95,7 @@ export function AutomationCard({ automation, onToggle, onViewResults, onEdit, on
                         whileTap={{ scale: 0.95 }}
                         onClick={(e) => {
                             e.stopPropagation();
-                            onToggle?.(automation.id, isActive ? 'active' : 'paused');
+                            onToggle?.(automation.id, isActive ? 'paused' : 'active');
                         }}
                         className={`flex items-center gap-1.5 px-4 py-2 rounded font-medium text-sm transition ${isActive
                             ? 'bg-yellow-900/50 border border-yellow-700 text-yellow-400 hover:bg-yellow-800/50'
