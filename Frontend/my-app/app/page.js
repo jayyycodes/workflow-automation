@@ -73,42 +73,87 @@ export default function LandingPage() {
         className="fixed w-full z-50 top-0"
       >
         <div className="glass-strong border-b border-green-900/50">
-          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-2 cursor-pointer"
-            >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex items-center justify-between">
+              {/* Logo */}
               <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center gap-2 cursor-pointer"
               >
-                <Terminal className="w-6 h-6 text-green-500" />
-              </motion.div>
-              <span className="text-xl font-bold text-green-500">
-                [SMART_WORKFLOW]
-              </span>
-            </motion.div>
-            <div className="flex items-center gap-6">
-              <a href="#features" className="text-green-600 hover:text-green-400 transition hidden md:block">{'>'}features()</a>
-              <a href="#how-it-works" className="text-green-600 hover:text-green-400 transition hidden md:block">{'>'}how_it_works()</a>
-              <a href="#use-cases" className="text-green-600 hover:text-green-400 transition hidden md:block">{'>'}use_cases()</a>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  href="/login"
-                  className="text-green-600 hover:text-green-400 transition font-medium"
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
                 >
-                  {'>'}login()
-                </Link>
+                  <Terminal className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
+                </motion.div>
+                <span className="text-base sm:text-xl font-bold text-green-500">
+                  [SMART_WORKFLOW]
+                </span>
               </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  href="/register"
-                  className="bg-green-900/70 border-2 border-green-700 px-6 py-2 rounded-lg font-medium shadow-lg shadow-green-500/20 hover:shadow-green-500/40 transition-shadow text-green-300"
-                >
-                  +register()
-                </Link>
-              </motion.div>
+
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex items-center gap-4 lg:gap-6">
+                <a href="#features" className="text-green-600 hover:text-green-400 transition text-sm lg:text-base">{'>'}features()</a>
+                <a href="#how-it-works" className="text-green-600 hover:text-green-400 transition text-sm lg:text-base">{'>'}how_it_works()</a>
+                <a href="#use-cases" className="text-green-600 hover:text-green-400 transition text-sm lg:text-base">{'>'}use_cases()</a>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Link
+                    href="/login"
+                    className="text-green-600 hover:text-green-400 transition font-medium text-sm lg:text-base"
+                  >
+                    {'>'}login()
+                  </Link>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Link
+                    href="/register"
+                    className="bg-green-900/70 border-2 border-green-700 px-4 lg:px-6 py-2 rounded-lg font-medium shadow-lg shadow-green-500/20 hover:shadow-green-500/40 transition-shadow text-green-300 text-sm lg:text-base"
+                  >
+                    +register()
+                  </Link>
+                </motion.div>
+              </div>
+
+              {/* Mobile Menu Button */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setMounted(!mounted)}
+                className="md:hidden p-2 rounded-lg border border-green-700 text-green-400 hover:bg-green-900/30 transition"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {mounted ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </motion.button>
             </div>
+
+            {/* Mobile Menu */}
+            {mounted && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="md:hidden pt-4 pb-2 border-t border-green-900/50 mt-4"
+              >
+                <div className="flex flex-col gap-3">
+                  <a href="#features" className="text-green-600 hover:text-green-400 transition py-2">{'>'}features()</a>
+                  <a href="#how-it-works" className="text-green-600 hover:text-green-400 transition py-2">{'>'}how_it_works()</a>
+                  <a href="#use-cases" className="text-green-600 hover:text-green-400 transition py-2">{'>'}use_cases()</a>
+                  <Link href="/login" className="text-green-600 hover:text-green-400 transition py-2">
+                    {'>'}login()
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="bg-green-900/70 border-2 border-green-700 px-6 py-2 rounded-lg font-medium shadow-lg text-green-300 text-center"
+                  >
+                    +register()
+                  </Link>
+                </div>
+              </motion.div>
+            )}
           </div>
         </div>
       </motion.nav>
@@ -134,11 +179,11 @@ export default function LandingPage() {
 
             <motion.h1
               variants={itemVariants}
-              className="text-4xl md:text-6xl font-bold mb-6 leading-tight"
+              className="text-3xl sm:text-4xl md:text-6xl font-bold mb-6 leading-tight break-words"
             >
-              {'>'}BUILD_POWERFUL_AUTOMATIONS{' '}
+              {'>'}BUILD_POWERFUL_{' '}
               <span className="gradient-text">
-                JUST_BY_DESCRIBING_THEM
+                AUTOMATIONS_JUST_BY_DESCRIBING_THEM
               </span>
             </motion.h1>
 
@@ -224,7 +269,7 @@ export default function LandingPage() {
               className="glass-strong p-8 rounded-2xl border border-red-900/30"
             >
               <h2 className="text-sm uppercase tracking-wider text-red-500 mb-4">// THE_OLD_WAY</h2>
-              <h3 className="text-3xl font-bold mb-6 text-red-500">automation_shouldnt_be_this_hard()</h3>
+              <h3 className="text-2xl sm:text-3xl font-bold mb-6 text-red-500 break-words">automation_shouldn<wbr />t_be_this_hard()</h3>
               <div className="space-y-4">
                 {[
                   'Manual scripts for everything',
@@ -254,7 +299,7 @@ export default function LandingPage() {
               className="glass-strong p-8 rounded-2xl border border-green-500/30"
             >
               <h2 className="text-sm uppercase tracking-wider text-green-400 mb-4">// THE_NEW_WAY</h2>
-              <h3 className="text-4xl font-bold mb-6 text-green-400">describe_it.done()</h3>
+              <h3 className="text-3xl sm:text-4xl font-bold mb-6 text-green-400 break-words">describe_it<wbr />.done()</h3>
               <div className="space-y-4">
                 {[
                   'Describe → Deploy',
@@ -290,7 +335,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-5xl font-bold mb-4 gradient-text">{'>'}HOW_IT_WORKS()</h2>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 gradient-text break-words">{'>'}HOW_IT_WORKS()</h2>
             <p className="text-xl text-green-600">// From idea to automation in seconds</p>
           </motion.div>
 
@@ -366,7 +411,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-5xl font-bold mb-4 text-green-400">{'>'}EVERYTHING_YOU_NEED()</h2>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-green-400 break-words">{'>'}EVERYTHING_YOU_NEED()</h2>
             <p className="text-xl text-green-600">// Powerful features for any automation workflow</p>
           </motion.div>
 
@@ -453,7 +498,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-5xl font-bold mb-4 gradient-text">{'>'}WHAT_YOU_CAN_BUILD()</h2>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 gradient-text break-words">{'>'}WHAT_YOU_CAN_BUILD()</h2>
             <p className="text-xl text-green-600">// Real workflows people are automating right now</p>
           </motion.div>
 
@@ -542,7 +587,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-5xl font-bold mb-4 text-green-400">{'>'}WHY_CHOOSE_US()</h2>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-green-400 break-words">{'>'}WHY_CHOOSE_US()</h2>
             <p className="text-xl text-green-600">// Built different from the ground up</p>
           </motion.div>
 
@@ -579,9 +624,9 @@ export default function LandingPage() {
                 key={i}
                 variants={itemVariants}
                 whileHover={{ scale: 1.02 }}
-                className="glass-strong rounded-xl p-8 border border-green-900/50 hover:border-green-500/30 transition-all duration-300"
+                className="glass-strong rounded-xl p-4 border border-green-900/50 hover:border-green-500/30 transition-all duration-300"
               >
-                <h4 className="text-2xl font-bold mb-3 gradient-text">
+                <h4 className="text-xl font-bold mb-3 gradient-text">
                   ${item.title}()
                 </h4>
                 <p className="text-green-400 mb-4">// {item.description}</p>
@@ -601,11 +646,11 @@ export default function LandingPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-6xl font-bold mb-6">
-              {'>'}stop_writing_scripts()
+            <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 break-words">
+              {'>'}stop_writing_<wbr />scripts()
               <br />
               <span className="gradient-text">
-                {'>'}start_automating_ideas()
+                {'>'}start_automating_<wbr />ideas()
               </span>
             </h2>
             <p className="text-xl text-green-600 mb-12">

@@ -15,8 +15,14 @@ load_dotenv(dotenv_path=env_path, override=True)
 # OpenRouter API Key (get free at https://openrouter.ai/keys)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
+# Gemini API Key (backup LLM - get free at https://makersuite.google.com/app/apikey)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
 # Model configuration - using free Llama model
 LLM_MODEL = os.getenv("LLM_MODEL", "meta-llama/llama-3.2-3b-instruct:free")
+
+# Gemini model (backup)
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
 # Legacy Gemini support (commented out)
 # GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

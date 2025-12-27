@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
-from config import OPENROUTER_API_KEY, LLM_MODEL, ALLOWED_STEPS
+from config import OPENROUTER_API_KEY, GEMINI_API_KEY, LLM_MODEL, GEMINI_MODEL, ALLOWED_STEPS
 from prompts import PARSE_INTENT_PROMPT, GENERATE_AUTOMATION_PROMPT, ENTITY_EXTRACTION_PROMPT
 from validator import validate_automation, sanitize_automation
 from clarification import ClarificationHandler
@@ -95,16 +95,36 @@ def extract_json_from_response(text: str) -> dict:
 
 def call_llm(prompt: str, user_text: str) -> str:
     """
-    Call OpenRouter API with the given prompt and user text.
+    Call LLM API with fallback mechanism.
+    Tries OpenRouter first, falls back to Gemini if it fails.
     """
-    if not OPENROUTER_API_KEY:
-        raise HTTPException(
-            status_code=500, 
-            detail="OPENROUTER_API_KEY not configured"
-        )
-    
     full_prompt = f"{prompt}\n\nUser request: {user_text}"
     
+    # Try OpenRouter first
+    if OPENROUTER_API_KEY:
+        try:
+            return call_openrouter(full_prompt)
+        except Exception as e:
+            print(f"OpenRouter failed: {e}, trying Gemini fallback...")
+    
+    # Fallback to Gemini
+    if GEMINI_API_KEY:
+        try:
+            return call_gemini(full_prompt)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Both LLM providers failed. OpenRouter and Gemini unavailable: {str(e)}"
+            )
+    
+    raise HTTPException(
+        status_code=500,
+        detail="No LLM API keys configured. Set OPENROUTER_API_KEY or GEMINI_API_KEY"
+    )
+
+
+def call_openrouter(full_prompt: str) -> str:
+    """Call OpenRouter API"""
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
@@ -119,15 +139,34 @@ def call_llm(prompt: str, user_text: str) -> str:
         ]
     }
     
-    try:
-        with httpx.Client(timeout=30.0) as client:
-            response = client.post(OPENROUTER_URL, headers=headers, json=payload)
-            response.raise_for_status()
-            result = response.json()
-            return result["choices"][0]["message"]["content"]
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=str(e))
-    except Exception as e:
+    with httpx.Client(timeout=60.0) as client:
+        response = client.post(OPENROUTER_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"]
+
+
+def call_gemini(full_prompt: str) -> str:
+    """Call Google Gemini API"""
+    from config import GEMINI_API_KEY, GEMINI_MODEL
+    
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "contents": [{
+            "parts": [{"text": full_prompt}]
+        }]
+    }
+    
+    with httpx.Client(timeout=60.0) as client:
+        response = client.get(f"{url}?key={GEMINI_API_KEY}", headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        return result["candidates"][0]["content"]["parts"][0]["text"]
         raise HTTPException(status_code=500, detail=f"LLM call failed: {str(e)}")
 
 

@@ -135,7 +135,7 @@ class APIClient {
     }
 
     // AI service endpoints
-    async generateAutomation(text, timeout = 30000) {
+    async generateAutomation(text, timeout = 90000) {
         const url = `${AI_BASE_URL}/generate-automation`;
         try {
             const controller = new AbortController();
@@ -175,7 +175,7 @@ class APIClient {
     }
 
     // Conversation endpoint with timeout
-    async sendConversation(text, inputMode = 'text', context = null, timeout = 30000) {
+    async sendConversation(text, inputMode = 'text', context = null, timeout = 90000) {
         const url = `${AI_BASE_URL}/conversation`;
         try {
             const controller = new AbortController();

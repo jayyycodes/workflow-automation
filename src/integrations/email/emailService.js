@@ -19,7 +19,13 @@ const createTransporter = () => {
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS
-        }
+        },
+        // Add timeouts to prevent hanging in production
+        connectionTimeout: 30000, // 30 seconds
+        greetingTimeout: 30000,
+        socketTimeout: 60000, // 60 seconds
+        pool: true,
+        maxConnections: 5
     };
 
     logger.debug('Creating email transporter', {
