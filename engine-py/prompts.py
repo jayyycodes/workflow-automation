@@ -69,7 +69,7 @@ STEP CONFIGURATIONS:
 - send_whatsapp: {{"type": "send_whatsapp", "to": "+1234567890", "message": "..."}}
 - send_sms: {{"type": "send_sms", "to": "+1234567890", "message": "..."}}
 - job_search: {{"type": "job_search", "query": "...", "location": "..."}}
-- condition: {{"type": "condition", "if": "expression", "then": [...], "else": [...]}}
+- condition: {{"type": "condition", "if": "stockPrice < 150"}} **Field is 'if' not 'condition'! Format: "stockPrice < 150"**
 
 NOTIFICATION CHANNEL KEYWORDS:
 - Email: "email", "mail", "send email"
@@ -130,7 +130,32 @@ Output:
   ]
 }}
 
-Example 4 (WhatsApp):
+Example 4 (Conditional Stock Alert - CRITICAL PATTERN!):
+Input: "Track Apple stock and SMS me if it drops below $150"
+Output:
+{{
+  "name": "Apple Stock Alert",
+  "description": "SMS notification when AAPL drops below $150",
+  "trigger": {{"type": "interval", "every": "5m"}},
+  "steps": [
+    {{"type": "fetch_stock_price", "symbol": "AAPL"}},
+    {{"type": "condition", "if": "stockPrice < 150"}},
+    {{"type": "send_sms", "message": "ALERT: AAPL dropped below $150!"}}
+  ]
+}}
+
+CRITICAL RULES FOR CONDITIONAL WORKFLOWS:
+1. ALWAYS include ALL 3 steps: [fetch data, condition check, send notification]
+2. NEVER generate incomplete workflows - even with conditions, the notification step is REQUIRED
+3. The executor will automatically skip the notification if condition is false
+4. Condition uses 'if' field (NOT 'condition'): {{"type": "condition", "if": "stockPrice < 150"}}
+
+More conditional examples:
+- "Email me if TSLA goes above $300" → [fetch_stock_price (TSLA), {{"type": "condition", "if": "stockPrice > 300"}}, send_email]
+- "WhatsApp when temperature exceeds 35°C" → [fetch_weather, {{"type": "condition", "if": "temperature > 35"}}, send_whatsapp]
+- "SMS if Bitcoin drops 10%" → [fetch_crypto_price (BTC), {{"type": "condition", "if": "change < -10"}}, send_sms]
+
+Example 5 (WhatsApp):
 Input: "WhatsApp me SBIN stock price every hour"
 Output:
 {{

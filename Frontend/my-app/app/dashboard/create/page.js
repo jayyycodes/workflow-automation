@@ -125,9 +125,9 @@ export default function CreateAutomationPage() {
 
     const examplePrompts = [
         "Send me an email every morning with stock prices for AAPL and GOOGL",
-        "Monitor my website and alert me if it goes down",
-        "Every day at 9 AM, fetch data from an API and save it to a database",
-        "Send a Slack message when a new job posting matches my criteria"
+        "Email me [Your_github_username] GitHub stars summary every Monday",
+        "Track Apple stock and sms if it drops below $150.",
+        "Notify me with weather updates of Mumbai everyday at 9AM"
     ];
 
     return (
