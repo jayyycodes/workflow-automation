@@ -202,6 +202,7 @@ OPENROUTER_API_KEY=your-openrouter-key (fallback LLM)
 
 ## 🏗️ Architecture
 
+```mermaid
 graph TD
     User[User Input] --> NextUI[Next.js UI]
     NextUI --> NodeAPI[Node.js API]
