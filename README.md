@@ -3,7 +3,7 @@
 **Transform plain English into powerful automations with AI**
 
 [![Powered by Google Gemini](https://img.shields.io/badge/Powered%20by-Google%20Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
-[![Live Demo](https://img.shields.io/badge/Live-Demo-00C853?style=for-the-badge)](https://your-render-url.onrender.com)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-00C853?style=for-the-badge)](https://workflow-automation-green.vercel.app/)
 
 ---
 
@@ -22,10 +22,10 @@ No coding required. Just natural language.
 
 ## 🎯 Live Demo
 
-![HackerNews Email](./docs/hackernews-email-demo.png)
+![HackerNews Email](./images/email-result.png)
 *Actual email generated automatically - beautifully formatted HackerNews digest*
 
-**Try it yourself:** [Live App](https://your-render-url.onrender.com)
+**Try it yourself:** [Live App](https://workflow-automation-green.vercel.app/)
 
 ---
 
@@ -88,13 +88,13 @@ No coding required. Just natural language.
 ## 📸 Screenshots
 
 ### Dashboard
-![Dashboard](./docs/dashboard.png)
+![Dashboard](./images/dashboard.png)
 
 ### Automation Creation
-![Create Automation](./docs/create-automation.png)
+![Create Automation](./images/create-automation.png)
 
 ### Email Results
-![Email Result](./docs/email-result.png)
+![Email Result](./images/email-result.png)
 
 ---
 
@@ -110,7 +110,7 @@ No coding required. Just natural language.
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/workflow-automation.git
+git clone https://github.com/jayyycodes/workflow-automation.git
 cd workflow-automation
 
 # 2. Install dependencies
@@ -202,27 +202,25 @@ OPENROUTER_API_KEY=your-openrouter-key (fallback LLM)
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────┐
-│   Next.js UI    │
-└────────┬────────┘
-         │
-         ↓
-┌─────────────────┐      ┌──────────────┐
-│  Node.js API    │─────→│  PostgreSQL  │
-└────────┬────────┘      └──────────────┘
-         │
-         ├──→ Scheduler (node-cron)
-         │
-         ├──→ Step Executors
-         │    ├─ Stock Fetcher
-         │    ├─ Weather Fetcher
-         │    ├─ Web Scraper
-         │    └─ Email Sender
-         │
-         └──→ Python AI Service
-              └─ Google Gemini
-```
+graph TD
+    User[User Input] --> NextUI[Next.js UI]
+    NextUI --> NodeAPI[Node.js API]
+    
+    subgraph Backend
+    NodeAPI --> DB[(PostgreSQL)]
+    NodeAPI --> Scheduler[Node-Cron Scheduler]
+    NodeAPI --> PyService[Python AI Service]
+    end
+    
+    subgraph AI Service
+    PyService --> Gemini[Google Gemini API]
+    end
+    
+    subgraph Executors
+    NodeAPI --> Scraper[Web Scraper]
+    NodeAPI --> Stocks[Yahoo Finance]
+    NodeAPI --> Email[SendGrid]
+    end
 
 ---
 
