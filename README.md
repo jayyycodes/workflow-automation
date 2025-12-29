@@ -222,7 +222,7 @@ graph TD
     NodeAPI --> Stocks[Yahoo Finance]
     NodeAPI --> Email[SendGrid]
     end
-
+```
 ---
 
 ## 🔥 Production Deployment
