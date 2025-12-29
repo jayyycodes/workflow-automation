@@ -65,11 +65,16 @@ STEP CONFIGURATIONS:
 - scrape_hackernews: {{"type": "scrape_hackernews", "story_type": "top|best|new", "count": 10}}
 - format_web_digest: {{"type": "format_web_digest", "provider": "github|hackernews"}}
 - send_notification: {{"type": "send_notification", "message": "..."}}
-- send_email: {{"type": "send_email", "to": "email", "subject": "...", "body": "..."}}
+- send_email: {{"type": "send_email", "to": "user@example.com", "subject": "...", "body": "..."}}
 - send_whatsapp: {{"type": "send_whatsapp", "to": "+1234567890", "message": "..."}}
 - send_sms: {{"type": "send_sms", "to": "+1234567890", "message": "..."}}
 - job_search: {{"type": "job_search", "query": "...", "location": "..."}}
 - condition: {{"type": "condition", "if": "stockPrice < 150"}} **Field is 'if' not 'condition'! Format: "stockPrice < 150"**
+
+CRITICAL: NOTIFICATION FIELDS ARE REQUIRED!
+- send_email: MUST include "to", "subject", "body"
+- send_sms: MUST include "to" and "message"  **ALWAYS use "+1234567890" as placeholder - backend auto-replaces with user's phone**
+- send_whatsapp: MUST include "to" and "message"  **ALWAYS use "+1234567890" as placeholder**
 
 NOTIFICATION CHANNEL KEYWORDS:
 - Email: "email", "mail", "send email"
@@ -140,7 +145,7 @@ Output:
   "steps": [
     {{"type": "fetch_stock_price", "symbol": "AAPL"}},
     {{"type": "condition", "if": "stockPrice < 150"}},
-    {{"type": "send_sms", "message": "ALERT: AAPL dropped below $150!"}}
+    {{"type": "send_sms", "to": "+1234567890", "message": "ALERT: AAPL dropped below $150!"}}
   ]
 }}
 
@@ -151,9 +156,9 @@ CRITICAL RULES FOR CONDITIONAL WORKFLOWS:
 4. Condition uses 'if' field (NOT 'condition'): {{"type": "condition", "if": "stockPrice < 150"}}
 
 More conditional examples:
-- "Email me if TSLA goes above $300" → [fetch_stock_price (TSLA), {{"type": "condition", "if": "stockPrice > 300"}}, send_email]
-- "WhatsApp when temperature exceeds 35°C" → [fetch_weather, {{"type": "condition", "if": "temperature > 35"}}, send_whatsapp]
-- "SMS if Bitcoin drops 10%" → [fetch_crypto_price (BTC), {{"type": "condition", "if": "change < -10"}}, send_sms]
+- "Email me if TSLA goes above $300" → [fetch_stock_price (TSLA), {"type": "condition", "if": "stockPrice > 300"}, {"type": "send_email", "to": "user@example.com", "subject": "TSLA Alert", "body": "..."}]
+- "WhatsApp when temperature exceeds 35°C" → [fetch_weather, {"type": "condition", "if": "temperature > 35"}, {"type": "send_whatsapp", "to": "+1234567890", "message": "..."}]
+- "SMS if Bitcoin drops 10%" → [fetch_crypto_price (BTC), {"type": "condition", "if": "change < -10"}, {"type": "send_sms", "to": "+1234567890", "message": "..."}]
 
 Example 5 (WhatsApp):
 Input: "WhatsApp me SBIN stock price every hour"
