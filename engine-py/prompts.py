@@ -156,9 +156,9 @@ CRITICAL RULES FOR CONDITIONAL WORKFLOWS:
 4. Condition uses 'if' field (NOT 'condition'): {{"type": "condition", "if": "stockPrice < 150"}}
 
 More conditional examples:
-- "Email me if TSLA goes above $300" → [fetch_stock_price (TSLA), {"type": "condition", "if": "stockPrice > 300"}, {"type": "send_email", "to": "user@example.com", "subject": "TSLA Alert", "body": "..."}]
-- "WhatsApp when temperature exceeds 35°C" → [fetch_weather, {"type": "condition", "if": "temperature > 35"}, {"type": "send_whatsapp", "to": "+1234567890", "message": "..."}]
-- "SMS if Bitcoin drops 10%" → [fetch_crypto_price (BTC), {"type": "condition", "if": "change < -10"}, {"type": "send_sms", "to": "+1234567890", "message": "..."}]
+- "Email me if TSLA goes above $300" → [fetch_stock_price (TSLA), {{"type": "condition", "if": "stockPrice > 300"}}, {{"type": "send_email", "to": "user@example.com", "subject": "TSLA Alert", "body": "..."}}]
+- "WhatsApp when temperature exceeds 35°C" → [fetch_weather, {{"type": "condition", "if": "temperature > 35"}}, {{"type": "send_whatsapp", "to": "+1234567890", "message": "..."}}]
+- "SMS if Bitcoin drops 10%" → [fetch_crypto_price (BTC), {{"type": "condition", "if": "change < -10"}}, {{"type": "send_sms", "to": "+1234567890", "message": "..."}}]
 
 Example 5 (WhatsApp):
 Input: "WhatsApp me SBIN stock price every hour"
