@@ -63,7 +63,8 @@ STEP CONFIGURATIONS:
 - fetch_weather: {{"type": "fetch_weather", "location": "user's city name"}} **IMPORTANT: Always ask user for their city, never use "current"**
 - scrape_github: {{"type": "scrape_github", "username": "github_user", "repo_type": "stars|repos|activity"}}
 - scrape_hackernews: {{"type": "scrape_hackernews", "story_type": "top|best|new", "count": 10}}
-- format_web_digest: {{"type": "format_web_digest", "provider": "github|hackernews"}}
+- scrape_reddit: {{"type": "scrape_reddit", "subreddit": "programming", "sort": "hot", "limit": 10, "keyword": "AI"}}
+- format_web_digest: {{"type": "format_web_digest", "provider": "github|hackernews|reddit"}}
 - send_notification: {{"type": "send_notification", "message": "..."}}
 - send_email: {{"type": "send_email", "to": "user@example.com", "subject": "...", "body": "..."}}
 - send_whatsapp: {{"type": "send_whatsapp", "to": "+1234567890", "message": "..."}}
@@ -81,6 +82,11 @@ NOTIFICATION CHANNEL KEYWORDS:
 - WhatsApp: "whatsapp", "wa", "send on whatsapp", "whatsapp me", "message on whatsapp"
 - SMS: "sms", "text", "text me", "send sms", "message me", "send text"
 - Default: If no channel specified, use "send_email"
+
+REDDIT SCRAPING TIPS:
+- Add "keyword" parameter to filter posts by title/text
+- Example: "Monitor r/programming for AI posts" → keyword: "AI"
+- Without keyword, returns all posts from subreddit
 
 RULES:
 1. Output ONLY valid JSON - no explanations, no markdown, no code blocks
@@ -132,6 +138,28 @@ Output:
     {{"type": "scrape_hackernews", "story_type": "top", "count": 10}},
     {{"type": "format_web_digest", "provider": "hackernews"}},
     {{"type": "send_email", "to": "user@example.com", "subject": "Top HackerNews Stories", "body": "Digest below"}}
+  ]
+}}
+
+CRITICAL FOR WEB SCRAPING WORKFLOWS:
+**ALWAYS include 3 steps for scraping workflows:**
+1. scrape_[provider] (github/hackernews/reddit)
+2. format_web_digest (provider: github|hackernews|reddit) **REQUIRED!**
+3. send notification (email/sms/discord/slack)
+
+**Without format_web_digest, the email will be empty!**
+
+Example 3.5 (Reddit with Keyword):
+Input: "Monitor r/programming for posts about 'AI' and email me"
+Output:
+{{
+  "name": "Reddit AI Posts Monitor",
+  "description": "Monitor r/programming for AI-related posts",
+  "trigger": {{"type": "interval", "every": "1h"}},
+  "steps": [
+    {{"type": "scrape_reddit", "subreddit": "programming", "keyword": "AI", "limit": 10}},
+    {{"type": "format_web_digest", "provider": "reddit"}},
+    {{"type": "send_email", "to": "user@example.com", "subject": "AI Posts on r/programming", "body": "Digest below"}}
   ]
 }}
 

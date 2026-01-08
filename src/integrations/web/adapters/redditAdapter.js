@@ -7,16 +7,19 @@ import axios from 'axios';
 import logger from '../../../utils/logger.js';
 
 const fetch = async (params) => {
-    const { subreddit, sort = 'hot', limit = 10 } = params;
+    let { subreddit, sort = 'hot', limit = 10, keyword } = params;
 
     if (!subreddit) {
         throw new Error('Subreddit name is required');
     }
 
-    // Reddit's public JSON API - just add .json to any URL!
-    const url = `https://www.reddit.com/r/${subreddit}/${sort}.json?limit=${limit}`;
+    // Strip "r/" prefix if AI included it
+    subreddit = subreddit.replace(/^r\//, '');
 
-    logger.info('Fetching from Reddit API', { subreddit, sort, limit });
+    // Reddit's public JSON API - just add .json to any URL!
+    const url = `https://www.reddit.com/r/${subreddit}/${sort}.json?limit=${limit * 2}`; // Fetch more for filtering
+
+    logger.info('Fetching from Reddit API', { subreddit, sort, limit, keyword });
 
     try {
         const response = await axios.get(url, {
@@ -26,11 +29,26 @@ const fetch = async (params) => {
             timeout: 10000
         });
 
-        const posts = response.data.data.children;
+        let posts = response.data.data.children;
+
+        // Filter by keyword if provided
+        if (keyword) {
+            const keywordLower = keyword.toLowerCase();
+            posts = posts.filter(post => {
+                const title = post.data.title.toLowerCase();
+                const selftext = (post.data.selftext || '').toLowerCase();
+                return title.includes(keywordLower) || selftext.includes(keywordLower);
+            });
+            logger.info(`Filtered posts by keyword "${keyword}"`, { matchedPosts: posts.length });
+        }
+
+        // Limit to requested count after filtering
+        posts = posts.slice(0, limit);
 
         return {
             subreddit,
             sort,
+            keyword: keyword || null,
             items: posts.map(post => ({
                 title: post.data.title,
                 author: post.data.author,
@@ -46,24 +64,44 @@ const fetch = async (params) => {
             total: posts.length
         };
     } catch (error) {
-        logger.error('Reddit API error', { error: error.message, subreddit });
+        logger.error('Reddit API error', {
+            error: error.message,
+            subreddit,
+            url: `https://www.reddit.com/r/${subreddit}/${sort}.json?limit=${limit}`,
+            statusCode: error.response?.status,
+            statusText: error.response?.statusText
+        });
         throw new Error(`Failed to fetch from Reddit: ${error.message}`);
     }
 };
 
 const formatDigest = (data) => {
-    const { subreddit, sort, items } = data;
+    const { subreddit, sort, keyword, items } = data;
 
-    let digest = `📱 Top ${sort} posts from r/${subreddit}\n\n`;
+    let digest = `📱 Reddit ${sort.toUpperCase()} Posts from r/${subreddit}`;
+    if (keyword) {
+        digest += ` (filtered by: "${keyword}")`;
+    }
+    digest += `\n`;
+    digest += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     items.forEach((post, i) => {
         digest += `${i + 1}. ${post.title}\n`;
-        digest += `   ⬆️ ${post.score} points | 💬 ${post.comments} comments\n`;
-        digest += `   👤 Posted by u/${post.author}\n`;
-        digest += `   🔗 ${post.url}\n\n`;
+        digest += `   👤 u/${post.author} | ⬆️ ${post.score} points | 💬 ${post.comments} comments\n`;
+
+        // Add preview of selftext if available
+        if (post.is_self && post.selftext) {
+            const preview = post.selftext.substring(0, 100);
+            digest += `   📝 ${preview}${post.selftext.length > 100 ? '...' : ''}\n`;
+        }
+
+        digest += `   🔗 ${post.url}\n`;
+        digest += `\n`;
     });
 
-    digest += `\n---\nPowered by Smart Workflow Automation`;
+    digest += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    digest += `📊 Found ${items.length} posts\n`;
+    digest += `Powered by Smart Workflow Automation`;
 
     return digest;
 };

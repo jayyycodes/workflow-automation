@@ -35,12 +35,39 @@ const statusConfig = {
     }
 };
 
-export function AutomationCard({ automation, onToggle, onViewResults, onEdit, onDelete }) {
+export function AutomationCard({ automation, onToggle, onViewResults, onEdit, onDelete, onUpdate }) {
     const [isHovered, setIsHovered] = useState(false);
     const [testing, setTesting] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
     const status = statusConfig[automation.status] || statusConfig.active;
     const StatusIcon = status.icon;
     const isActive = automation.status === 'active';
+
+    const handleRunAutomation = async () => {
+        try {
+            setActionLoading(true);
+            const result = await api.runAutomation(automation.id);
+
+            // Check execution status - only fail if execution actually failed
+            if (result.execution?.status === 'failed') {
+                toast.error('Automation execution failed');
+            } else if (result.execution?.status === 'success') {
+                toast.success('Automation executed successfully!');
+            } else {
+                // Execution is running or queued
+                toast.success('Automation started!');
+            }
+
+            if (onUpdate) {
+                onUpdate();
+            }
+        } catch (error) {
+            console.error('Failed to run automation:', error);
+            toast.error(error.message || 'Failed to run automation');
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     const handleTestRun = async (e) => {
         e.stopPropagation();

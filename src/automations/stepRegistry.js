@@ -123,16 +123,17 @@ const sendEmail = async (params, context) => {
         logger.info('Using logged-in user email for notification', { email: recipientEmail });
     }
 
-    // DIGEST CHECK FIRST!
+    // DIGEST CHECK - look for format_web_digest step output
     const digestCheck = context.stepOutputs || {};
-    const digest = Object.values(digestCheck).find(o => o?.digest);
-    if (digest?.digest) {
-        logger.info('📧 Using web scraper digest');
+    const formattedDigest = Object.values(digestCheck).find(o => typeof o === 'object' && o?.digest);
+
+    if (formattedDigest?.digest) {
+        logger.info('📧 Using formatted web digest');
         return notify({
             channel: 'email',
             ...params,
             to: recipientEmail,
-            body: digest.digest
+            body: formattedDigest.digest
         }, context);
     }
 
@@ -262,16 +263,17 @@ const sendSms = async (params, context) => {
         recipientPhone = formatPhoneNumber(recipientPhone);
     }
 
-    // DIGEST CHECK FIRST!
+    // DIGEST CHECK - look for format_web_digest step output
     const digestCheckSMS = context.stepOutputs || {};
-    const digestSMS = Object.values(digestCheckSMS).find(o => o?.digest);
-    if (digestSMS?.digest) {
-        logger.info('📱 Using web scraper digest for SMS');
+    const formattedDigestSMS = Object.values(digestCheckSMS).find(o => typeof o === 'object' && o?.digest);
+
+    if (formattedDigestSMS?.digest) {
+        logger.info('📱 Using formatted web digest for SMS');
         return notify({
             channel: 'sms',
             ...params,
             to: recipientPhone,
-            message: digestSMS.digest
+            message: formattedDigestSMS.digest
         }, context);
     }
 

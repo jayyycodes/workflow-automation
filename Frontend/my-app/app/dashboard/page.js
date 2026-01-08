@@ -121,23 +121,27 @@ export default function DashboardPage() {
         }
     };
 
-    const handleViewResults = async (id, forceRun = false) => {
+    const handleViewResults = async (id, testRun = false) => {
         try {
-            // If forceRun, execute the automation first
-            if (forceRun) {
+            // Test run mode - execute and show results
+            if (testRun) {
                 const result = await api.runAutomation(id);
 
-                // Check if execution actually succeeded even if there are step errors
-                if (result && result.executionId) {
-                    setExecutionResult(result);
+                // API returns: { execution_id, status, steps, duration, error }
+                if (result && result.execution_id) {
+                    // Fetch the full execution details
+                    const executions = await api.getAutomationExecutions(id);
+                    const latestExecution = executions[0];
 
-                    // Show appropriate message based on actual result
+                    setExecutionResult(latestExecution);
+
+                    // Show toast based on status
                     if (result.status === 'success') {
-                        success('Test run completed successfully!');
+                        success('✅ Automation executed successfully!');
                     } else if (result.status === 'failed') {
-                        showError('Test run completed but some steps failed. Check results for details.');
+                        showError('❌ Some steps failed. Check results for details.');
                     } else {
-                        success('Test run completed!');
+                        success('🚀 Automation started!');
                     }
 
                     // Refresh to show new execution
@@ -349,8 +353,17 @@ export default function DashboardPage() {
                             automation={automation}
                             onToggle={handleToggle}
                             onViewResults={handleViewResults}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
+                            onEdit={(id) => router.push(`/dashboard/edit/${id}`)}
+                            onDelete={async (id) => {
+                                try {
+                                    await api.deleteAutomation(id);
+                                    success('Automation deleted successfully!');
+                                    loadAutomations(true);
+                                } catch (error) {
+                                    showError('Failed to delete automation');
+                                }
+                            }}
+                            onUpdate={() => loadAutomations(true)}
                         />
                     ))}
                 </motion.div>

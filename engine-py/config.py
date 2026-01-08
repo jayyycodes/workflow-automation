@@ -35,6 +35,7 @@ ALLOWED_STEPS = [
     'fetch_crypto_price',
     'scrape_github',
     'scrape_hackernews',
+    'scrape_reddit',
     'format_web_digest',
     'send_email',
     'send_sms',

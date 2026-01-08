@@ -135,7 +135,7 @@ class APIClient {
     }
 
     // AI service endpoints
-    async generateAutomation(text, timeout = 90000) {
+    async generateAutomation(text, timeout = 120000) {
         const url = `${AI_BASE_URL}/generate-automation`;
         try {
             const controller = new AbortController();
