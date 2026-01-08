@@ -11,6 +11,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useToast } from '@/providers/toast-provider';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { AIThinkingLoader, ProgressBar } from '@/components/ui/loading-states';
 import api from '@/lib/api';
 
 export default function CreateAutomationPage() {
@@ -19,6 +20,7 @@ export default function CreateAutomationPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [step, setStep] = useState('input'); // 'input', 'preview', 'saving'
+    const [progress, setProgress] = useState(0);
     const { isAuthenticated, loading: authLoading } = useAuth();
     const { success, error: showError } = useToast();
     const router = useRouter();
@@ -48,9 +50,19 @@ export default function CreateAutomationPage() {
 
         setError('');
         setLoading(true);
+        setProgress(0);
 
         try {
+            // Simulate progress for better UX
+            const progressInterval = setInterval(() => {
+                setProgress(prev => Math.min(prev + 10, 90));
+            }, 300);
+
             const result = await api.generateAutomation(description);
+
+            clearInterval(progressInterval);
+            setProgress(100);
+
             console.log('AI Response:', result);
             console.log('Steps:', result.steps);
             console.log('Automation object:', result.automation);
@@ -62,6 +74,7 @@ export default function CreateAutomationPage() {
         } catch (err) {
             console.error('Generation failed:', err);
             setError(err.message || 'Failed to generate automation. Please try again.');
+            setProgress(0);
         } finally {
             setLoading(false);
         }
@@ -250,6 +263,21 @@ export default function CreateAutomationPage() {
                                 </>
                             )}
                         </div>
+
+                        {/* Progress indicator during loading */}
+                        {loading && step === 'input' && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-4"
+                            >
+                                <ProgressBar
+                                    progress={progress}
+                                    steps={['Analyzing', 'Generating', 'Optimizing']}
+                                    currentStep={Math.floor(progress / 33)}
+                                />
+                            </motion.div>
+                        )}
                     </div>
 
                     {/* Tips */}

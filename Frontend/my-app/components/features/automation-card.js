@@ -19,6 +19,13 @@ const statusConfig = {
         bgColor: 'bg-yellow-900/30',
         borderColor: 'border-yellow-700'
     },
+    draft: {
+        icon: Edit,
+        label: 'Draft',
+        color: 'text-gray-500',
+        bgColor: 'bg-gray-900/30',
+        borderColor: 'border-gray-700'
+    },
     failed: {
         icon: XCircle,
         label: 'Failed',
@@ -95,7 +102,9 @@ export function AutomationCard({ automation, onToggle, onViewResults, onEdit, on
                         whileTap={{ scale: 0.95 }}
                         onClick={(e) => {
                             e.stopPropagation();
-                            onToggle?.(automation.id, isActive ? 'paused' : 'active');
+                            // Draft → Active, Paused → Active, Active → Paused
+                            const newStatus = isActive ? 'paused' : 'active';
+                            onToggle?.(automation.id, newStatus);
                         }}
                         className={`flex items-center gap-1.5 px-4 py-2 rounded font-medium text-sm transition ${isActive
                             ? 'bg-yellow-900/50 border border-yellow-700 text-yellow-400 hover:bg-yellow-800/50'
