@@ -6,10 +6,12 @@
 import logger from '../../utils/logger.js';
 import githubAdapter from './adapters/githubAdapter.js';
 import hackerNewsAdapter from './adapters/hackerNewsAdapter.js';
+import redditAdapter from './adapters/redditAdapter.js';
 
 const ADAPTERS = {
     github: githubAdapter,
-    hackernews: hackerNewsAdapter
+    hackernews: hackerNewsAdapter,
+    reddit: redditAdapter
 };
 
 export const scrapeWeb = async (provider, params) => {

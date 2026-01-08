@@ -1,0 +1,27 @@
+# ============================================
+# EXAMPLE AUTOMATION PROMPTS FOR DEMO
+# ============================================
+
+# Reddit → Email Digest
+"Send me top 10 posts from r/programming every morning at 9 AM via email"
+
+# Reddit → Discord
+"Fetch hot posts from r/webdev and send them to my Discord channel"
+
+# Stock Alert → Multi-Channel
+"Check Apple stock price and if it drops below $150, send alert to Discord, Slack, and Email"
+
+# GitHub + Slack
+"Get my starred repos from GitHub and send a weekly summary to Slack"
+
+# HackerNews → Discord
+"Send top 5 HackerNews stories to Discord every day at 6 PM"
+
+# Reddit → SMS
+"Monitor r/programming for posts about 'AI' and send SMS when found"
+
+# Weather → Slack
+"Check London weather every morning and post to Slack if it's raining"
+
+# Multi-Source Digest
+"Scrape r/programming and HackerNews, combine them, and send to Discord"

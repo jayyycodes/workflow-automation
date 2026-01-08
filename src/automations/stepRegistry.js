@@ -4,6 +4,8 @@ import { fetchData, fetchStockPrice, fetchCryptoPrice } from '../integrations/fe
 import whatsappService from '../integrations/whatsapp/whatsappService.js';
 import smsService from '../integrations/sms/smsService.js';
 import webScraper from '../integrations/web/webScraperService.js';
+import discordService from '../integrations/messaging/discordService.js';
+import slackService from '../integrations/messaging/slackService.js';
 
 /**
  * Generic Notify Handler
@@ -72,6 +74,28 @@ const notify = async (params, context) => {
                 };
             }
             return await smsService.sendSMS(to, message);
+
+        case 'discord':
+            if (!discordService.isReady() && !params.webhook_url) {
+                logger.warn('Discord service not configured, skipping message');
+                return {
+                    success: false,
+                    error: 'Discord webhook not configured',
+                    channel: 'discord'
+                };
+            }
+            return await discordService.sendMessage(params.webhook_url, message, params.options || {});
+
+        case 'slack':
+            if (!slackService.isReady() && !params.webhook_url) {
+                logger.warn('Slack service not configured, skipping message');
+                return {
+                    success: false,
+                    error: 'Slack webhook not configured',
+                    channel: 'slack'
+                };
+            }
+            return await slackService.sendMessage(params.webhook_url, message, params.options || {});
 
         default:
             throw new Error(`Unsupported notification channel: ${channel}`);
@@ -491,6 +515,16 @@ const scrapeHackerNews = async (params) => {
     return result.data;
 };
 
+const scrapeReddit = async (params) => {
+    const result = await webScraper.scrapeWeb('reddit', {
+        subreddit: params.subreddit,
+        sort: params.sort || 'hot',
+        limit: params.limit || 10
+    });
+    logger.info('Reddit scrape completed', { subreddit: params.subreddit, items: result.data.items.length });
+    return result.data;
+};
+
 const formatWebDigest = async (params, context) => {
     const provider = params.provider;
     const previousStep = context.stepOutputs?.['step_1'];
@@ -515,10 +549,13 @@ const stepRegistry = {
     send_email: sendEmail,
     send_whatsapp: sendWhatsapp,
     send_sms: sendSms,
+    send_discord: async (params, context) => notify({ channel: 'discord', ...params }, context),
+    send_slack: async (params, context) => notify({ channel: 'slack', ...params }, context),
 
     // Web scraping
     scrape_github: scrapeGithub,
     scrape_hackernews: scrapeHackerNews,
+    scrape_reddit: scrapeReddit,
     format_web_digest: formatWebDigest,
 
     // Utility actions
