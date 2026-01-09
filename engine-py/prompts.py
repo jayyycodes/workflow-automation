@@ -277,3 +277,5 @@ Input: "Send me Bitcoin price on email daily"
 Output: {{"intent": "crypto_monitor", "entities": {{"symbol": "BTC", "interval": "1d", "notification_channel": "email"}}}}
 """
 
+
+
