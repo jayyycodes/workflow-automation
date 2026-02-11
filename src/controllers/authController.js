@@ -1,4 +1,4 @@
-import User from '../models/User.js';
+import { db } from '../config/firebase.js';
 import authService from '../services/authService.js';
 import logger from '../utils/logger.js';
 
@@ -67,8 +67,8 @@ const authController = {
             }
 
             // Check if user already exists
-            const existingUser = await User.findByEmail(email);
-            if (existingUser) {
+            const userSnapshot = await db.collection('users').where('email', '==', email).get();
+            if (!userSnapshot.empty) {
                 return res.status(409).json({
                     error: 'Conflict',
                     message: 'Email already registered'
@@ -79,12 +79,17 @@ const authController = {
             const passwordHash = await authService.hashPassword(password);
 
             // Create user
-            const user = await User.create({
+            const newUser = {
                 email,
-                passwordHash,
+                password_hash: passwordHash,
                 name: name || null,
-                whatsappNumber: whatsappNumber || null
-            });
+                whatsapp_number: whatsappNumber || null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            const docRef = await db.collection('users').add(newUser);
+            const user = { id: docRef.id, ...newUser };
 
             // Generate token
             const token = authService.generateToken(user.id);
@@ -124,13 +129,16 @@ const authController = {
             }
 
             // Find user
-            const user = await User.findByEmail(email);
-            if (!user) {
+            const userSnapshot = await db.collection('users').where('email', '==', email).get();
+            if (userSnapshot.empty) {
                 return res.status(401).json({
                     error: 'Unauthorized',
                     message: 'Invalid email or password'
                 });
             }
+
+            const userDoc = userSnapshot.docs[0];
+            const user = { id: userDoc.id, ...userDoc.data() };
 
             // Verify password
             const isValid = await authService.comparePassword(password, user.password_hash);
@@ -167,14 +175,17 @@ const authController = {
      */
     me: async (req, res, next) => {
         try {
-            const user = await User.findById(req.user.id);
+            const docRef = db.collection('users').doc(req.user.id);
+            const doc = await docRef.get();
 
-            if (!user) {
+            if (!doc.exists) {
                 return res.status(404).json({
                     error: 'Not Found',
                     message: 'User not found'
                 });
             }
+
+            const user = { id: doc.id, ...doc.data() };
 
             // Remove sensitive data
             delete user.password_hash;

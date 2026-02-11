@@ -1,5 +1,4 @@
-import Automation from '../models/Automation.js';
-import Execution from '../models/Execution.js';
+import { db } from '../config/firebase.js';
 import { executeWorkflow } from '../automations/workflowExecutor.js';
 import { AUTOMATION_STATUS } from '../utils/constants.js';
 import logger from '../utils/logger.js';
@@ -15,7 +14,7 @@ const automationController = {
     create: async (req, res, next) => {
         try {
             const { name, description, trigger, steps, status } = req.body;
-            const userId = req.user.id;
+            const userId = req.user.id; // User ID from auth middleware
 
             // Validate required fields
             if (!name) {
@@ -47,15 +46,19 @@ const automationController = {
                 });
             }
 
-            // Create automation - always as DRAFT (ignore status from request)
-            const automation = await Automation.create({
-                userId,
+            const newAutomation = {
+                user_id: userId,
                 name,
-                description,
+                description: description || null,
                 trigger,
-                steps
-                // Status will default to DRAFT in model
-            });
+                steps,
+                status: AUTOMATION_STATUS.DRAFT,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            const docRef = await db.collection('automations').add(newAutomation);
+            const automation = { id: docRef.id, ...newAutomation };
 
             logger.info('Automation created', {
                 automationId: automation.id,
@@ -83,28 +86,35 @@ const automationController = {
             const { status } = req.body;
             const userId = req.user.id;
 
-            // Find automation
-            const automation = await Automation.findById(id);
+            const docRef = db.collection('automations').doc(id);
+            const doc = await docRef.get();
 
-            if (!automation) {
+            if (!doc.exists) {
                 return res.status(404).json({
                     error: 'Not Found',
                     message: 'Automation not found'
                 });
             }
 
+            const automationData = doc.data();
+
             // Security: Check ownership
-            if (automation.user_id !== userId) {
+            if (automationData.user_id !== userId) {
                 return res.status(403).json({
                     error: 'Forbidden',
                     message: 'You do not have access to this automation'
                 });
             }
 
-            const previousStatus = automation.status;
+            const previousStatus = automationData.status;
 
-            // Update status in database
-            const updated = await Automation.updateStatus(id, status);
+            // Update status in Firestore
+            await docRef.update({
+                status: status,
+                updated_at: new Date().toISOString()
+            });
+
+            const updated = { id, ...automationData, status, updated_at: new Date().toISOString() };
 
             // Try to update scheduler - if this fails, rollback
             try {
@@ -117,7 +127,7 @@ const automationController = {
                     error: schedulerError.message
                 });
 
-                await Automation.updateStatus(id, previousStatus);
+                await docRef.update({ status: previousStatus });
 
                 return res.status(500).json({
                     error: 'Internal Server Error',
@@ -150,7 +160,20 @@ const automationController = {
         try {
             const userId = req.user.id;
 
-            const automations = await Automation.findByUserId(userId);
+            const snapshot = await db.collection('automations')
+                .where('user_id', '==', userId)
+                .get(); // Firestore doesn't support order by desc on basic queries without index usually, but for small sets it's ok. 
+            // To sort by created_at desc, we might need a composite index. 
+            // For now, let's sort in memory if needed or rely on client.
+            // Actually, let's sort in memory to avoid index creation delay.
+
+            const automations = [];
+            snapshot.forEach(doc => {
+                automations.push({ id: doc.id, ...doc.data() });
+            });
+
+            // Sort by created_at desc
+            automations.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             logger.debug('Automations listed', { userId, count: automations.length });
 
@@ -174,15 +197,18 @@ const automationController = {
             const { input } = req.body;
             const userId = req.user.id;
 
-            // Find automation
-            const automation = await Automation.findById(id);
+            const docRef = db.collection('automations').doc(id);
+            const doc = await docRef.get();
 
-            if (!automation) {
+            if (!doc.exists) {
                 return res.status(404).json({
                     error: 'Not Found',
                     message: 'Automation not found'
                 });
             }
+
+            const automationData = doc.data();
+            const automation = { id: doc.id, ...automationData };
 
             // Security: Check ownership
             if (automation.user_id !== userId) {
@@ -192,32 +218,32 @@ const automationController = {
                 });
             }
 
-            // Create execution record (status = PENDING initially, then RUNNING)
-            const execution = await Execution.create({
+            // Create execution record
+            const newExecution = {
                 automationId: automation.id,
-                input: input || null
-            });
+                input: input || null,
+                status: 'PENDING',
+                created_at: new Date().toISOString()
+            };
+
+            const execRef = await db.collection('executions').add(newExecution);
+            const executionId = execRef.id;
 
             logger.info('Automation run triggered', {
                 automationId: automation.id,
-                executionId: execution.id,
+                executionId: executionId,
                 userId
             });
 
-            // Debug: Log user object to verify whatsapp number is loaded
-            logger.info('User context for execution:', {
-                userId: req.user.id,
-                email: req.user.email,
-                hasWhatsAppNumber: !!req.user.whatsapp_number,
-                whatsappNumber: req.user.whatsapp_number
-            });
-
             // Execute the workflow with user context
-            const result = await executeWorkflow(automation, execution.id, req.user);
+            const result = await executeWorkflow(automation, executionId, req.user);
+
+            // Access to result.status is important here. It should be updated by executeWorkflow implicitly or explicitly. 
+            // The executeWorkflow typically updates the DB. We return what it sends back.
 
             res.json({
                 message: result.success ? 'Automation executed successfully' : 'Automation execution failed',
-                execution_id: execution.id,
+                execution_id: executionId,
                 status: result.status,
                 steps: result.steps,
                 duration: result.duration,
@@ -238,18 +264,20 @@ const automationController = {
             const { id } = req.params;
             const userId = req.user.id;
 
-            // Find automation
-            const automation = await Automation.findById(id);
+            const docRef = db.collection('automations').doc(id);
+            const doc = await docRef.get();
 
-            if (!automation) {
+            if (!doc.exists) {
                 return res.status(404).json({
                     error: 'Not Found',
                     message: 'Automation not found'
                 });
             }
 
+            const automationData = doc.data();
+
             // Security: Check ownership
-            if (automation.user_id !== userId) {
+            if (automationData.user_id !== userId) {
                 return res.status(403).json({
                     error: 'Forbidden',
                     message: 'You do not have access to this automation'
@@ -257,7 +285,17 @@ const automationController = {
             }
 
             // Get executions
-            const executions = await Execution.findByAutomationId(id);
+            const snapshot = await db.collection('executions')
+                .where('automationId', '==', id)
+                .get();
+
+            const executions = [];
+            snapshot.forEach(doc => {
+                executions.push({ id: doc.id, ...doc.data() });
+            });
+
+            // Sort by created_at desc
+            executions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             logger.debug('Executions fetched', {
                 automationId: id,
@@ -280,14 +318,17 @@ const automationController = {
             const { id } = req.params;
             const userId = req.user.id;
 
-            const automation = await Automation.findById(id);
+            const docRef = db.collection('automations').doc(id);
+            const doc = await docRef.get();
 
-            if (!automation) {
+            if (!doc.exists) {
                 return res.status(404).json({
                     error: 'Not Found',
                     message: 'Automation not found'
                 });
             }
+
+            const automation = { id: doc.id, ...doc.data() };
 
             // Security: Check ownership
             if (automation.user_id !== userId) {
@@ -313,24 +354,27 @@ const automationController = {
             const { id } = req.params;
             const userId = req.user.id;
 
-            const automation = await Automation.findById(id);
+            const docRef = db.collection('automations').doc(id);
+            const doc = await docRef.get();
 
-            if (!automation) {
+            if (!doc.exists) {
                 return res.status(404).json({
                     error: 'Not Found',
                     message: 'Automation not found'
                 });
             }
 
+            const automationData = doc.data();
+
             // Security: Check ownership
-            if (automation.user_id !== userId) {
+            if (automationData.user_id !== userId) {
                 return res.status(403).json({
                     error: 'Forbidden',
                     message: 'You do not have access to this automation'
                 });
             }
 
-            await Automation.delete(id);
+            await docRef.delete();
 
             logger.info('Automation deleted', { automationId: id, userId });
 
@@ -346,3 +390,4 @@ const automationController = {
 };
 
 export default automationController;
+

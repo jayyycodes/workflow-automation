@@ -6,16 +6,35 @@
  * Lifecycle: PENDING → RUNNING → SUCCESS | FAILED
  */
 
-import Execution from '../models/Execution.js';
+import { db } from '../config/firebase.js';
 import stepRegistry, { isStepSupported, getStepHandler } from './stepRegistry.js';
 import { EXECUTION_STATUS } from '../utils/constants.js';
 import logger from '../utils/logger.js';
 
 /**
+ * Recursively remove undefined values from an object
+ * Firestore doesn't allow undefined values, so we clean them before saving
+ */
+const removeUndefined = (obj) => {
+    if (obj === null || obj === undefined) return null;
+    if (typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+        return obj.map(item => removeUndefined(item)).filter(item => item !== undefined);
+    }
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+        const cleanValue = removeUndefined(value);
+        if (cleanValue !== undefined) {
+            acc[key] = cleanValue;
+        }
+        return acc;
+    }, {});
+};
+
+/**
  * Execute a workflow automation
  * 
  * @param {Object} automation - The automation object with steps
- * @param {number} executionId - The execution record ID
+ * @param {string} executionId - The execution record ID
  * @param {Object} user - The user object (id, email, name)
  * @returns {Promise<Object>} Execution result with step outputs
  */
@@ -101,13 +120,13 @@ export const executeWorkflow = async (automation, executionId, user = null) => {
         });
 
         // Update execution record with success
-        await Execution.complete(executionId, {
+        await db.collection('executions').doc(executionId).update({
             status: EXECUTION_STATUS.SUCCESS,
-            result: {
+            result: removeUndefined({
                 steps: stepResults,
                 duration: totalDuration,
                 completedAt: new Date().toISOString()
-            }
+            })
         });
 
         return {
@@ -128,14 +147,14 @@ export const executeWorkflow = async (automation, executionId, user = null) => {
         });
 
         // Update execution record with failure
-        await Execution.complete(executionId, {
+        await db.collection('executions').doc(executionId).update({
             status: EXECUTION_STATUS.FAILED,
             error: error.message,
-            result: {
+            result: removeUndefined({
                 steps: stepResults,
                 failedAt: new Date().toISOString(),
                 duration: totalDuration
-            }
+            })
         });
 
         return {

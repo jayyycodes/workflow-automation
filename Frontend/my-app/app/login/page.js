@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, ArrowRight, Terminal, AlertCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/providers/auth-provider';
 import Link from 'next/link';
+import { MouseGlow } from '@/components/ui/mouse-glow';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -33,16 +34,13 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-green-400 flex items-center justify-center p-6 relative overflow-hidden font-mono">
-            {/* Matrix Background */}
-            <div className="fixed inset-0 opacity-20">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-900/30 rounded-full blur-[150px] animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-950/30 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '1s' }} />
-            </div>
+        <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-green-500/30 selection:text-green-200">
+            {/* Mouse-interactive background glow */}
+            <MouseGlow />
 
-            {/* Scanline Effect */}
-            <div className="fixed inset-0 pointer-events-none opacity-10">
-                <div className="absolute inset-0 bg-[linear-gradient(0deg,transparent_50%,rgba(34,197,94,0.03)_50%)] bg-[length:100%_4px]" />
+            {/* Subtle Grid Background */}
+            <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:4rem_4rem]" />
             </div>
 
             <motion.div
@@ -52,108 +50,109 @@ export default function LoginPage() {
                 className="w-full max-w-md relative z-10"
             >
                 {/* Logo */}
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2, type: 'spring' }}
-                    className="flex items-center justify-center gap-2 mb-8"
-                >
-                    <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                    >
-                        <Terminal className="w-10 h-10 text-green-500" />
-                    </motion.div>
-                    <span className="text-2xl font-bold text-green-500 tracking-wider">
-                        [AUTH_SYSTEM]
-                    </span>
-                </motion.div>
+                <div className="flex justify-center mb-8">
+                    <Link href="/" className="flex items-center gap-2 group">
+                        <div className="bg-green-600 p-1.5 rounded-lg group-hover:bg-green-500 transition-colors shadow-lg shadow-green-900/20">
+                            <Zap className="w-5 h-5 text-white fill-white" />
+                        </div>
+                        <span className="text-xl font-bold tracking-tight text-white group-hover:text-green-400 transition-colors">
+                            SmartFlow
+                        </span>
+                    </Link>
+                </div>
 
                 {/* Login Card */}
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-black/60 border border-green-800 rounded p-8 shadow-2xl shadow-green-900/30"
-                >
-                    <h1 className="text-3xl font-bold mb-2 text-green-400">{'>'} user.login()</h1>
-                    <p className="text-green-700 mb-8 text-sm">// Authenticate to access system</p>
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                    {/* Top Glow */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent opacity-50" />
+
+                    <div className="text-center mb-8">
+                        <h1 className="text-2xl font-bold text-white mb-2">Welcome back</h1>
+                        <p className="text-gray-400 text-sm">Enter your credentials to access your workspace</p>
+                    </div>
 
                     {error && (
                         <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="mb-6 p-4 rounded bg-red-900/20 border border-red-800 flex items-start gap-3"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3"
                         >
-                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-500">{error}</p>
+                            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-red-400">{error}</p>
                         </motion.div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <Input
-                            label="$ email"
-                            type="email"
-                            placeholder="user@system.net"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            icon={Mail}
-                            required
-                        />
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">Email</label>
+                            <Input
+                                type="email"
+                                placeholder="name@company.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                icon={Mail}
+                                required
+                                className="bg-[#111] border-white/5 focus:border-green-500/50 text-white placeholder:text-gray-600 h-11"
+                            />
+                        </div>
 
-                        <Input
-                            label="$ password"
-                            type="password"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            icon={Lock}
-                            required
-                        />
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">Password</label>
+                            <Input
+                                type="password"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                icon={Lock}
+                                required
+                                className="bg-[#111] border-white/5 focus:border-green-500/50 text-white placeholder:text-gray-600 h-11"
+                            />
+                        </div>
 
                         <div className="flex items-center justify-between text-sm">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="rounded border-green-800 bg-black" />
-                                <span className="text-green-700">remember_session</span>
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                                <input
+                                    type="checkbox"
+                                    className="w-4 h-4 rounded border-white/10 bg-[#111] text-green-600 focus:ring-green-500/20 focus:ring-offset-0 transition"
+                                />
+                                <span className="text-gray-400 group-hover:text-gray-300 transition">Remember me</span>
                             </label>
-                            <a href="#" className="text-green-600 hover:text-green-400 transition">
-                                forgot_pwd?
-                            </a>
+                            <Link href="#" className="text-green-500 hover:text-green-400 font-medium transition">
+                                Forgot password?
+                            </Link>
                         </div>
 
                         <Button
                             type="submit"
-                            className="w-full bg-green-900/70 border-2 border-green-700 text-green-300 hover:bg-green-800/70 shadow-lg shadow-green-900/30"
+                            className="w-full bg-green-600 hover:bg-green-500 text-white h-11 rounded-lg font-semibold shadow-lg shadow-green-900/20 hover:shadow-green-500/20 transition-all duration-300"
                             disabled={loading}
                         >
                             {loading ? (
-                                '// authenticating...'
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <span>Signing in...</span>
+                                </div>
                             ) : (
-                                <>
-                                    {'>'} authenticate <ArrowRight className="w-4 h-4 ml-2" />
-                                </>
+                                <span className="flex items-center gap-2">
+                                    Log In <ArrowRight className="w-4 h-4" />
+                                </span>
                             )}
                         </Button>
                     </form>
 
-                    <div className="mt-6 text-center text-sm text-green-700">
-                        // No account?{' '}
-                        <Link href="/register" className="text-green-500 hover:text-green-300 font-semibold transition">
-                            create_user()
+                    <div className="mt-8 pt-6 border-t border-white/5 text-center text-sm text-gray-500">
+                        Don&apos;t have an account?{' '}
+                        <Link href="/register" className="text-green-500 hover:text-green-400 font-semibold transition">
+                            Create an account
                         </Link>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="mt-6 text-center"
-                >
-                    <Link href="/" className="text-green-700 hover:text-green-500 transition text-sm">
-                        {'<'} return_home
+                <div className="mt-8 text-center">
+                    <Link href="/" className="text-gray-500 hover:text-gray-300 transition text-sm flex items-center justify-center gap-2">
+                        &larr; Back to Home
                     </Link>
-                </motion.div>
+                </div>
             </motion.div>
         </div>
     );

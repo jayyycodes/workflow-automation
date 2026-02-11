@@ -2,14 +2,15 @@
 # AI Core with OpenRouter
 
 # Web framework
-fastapi==0.104.1
-uvicorn==0.24.0
+fastapi>=0.109.0
+uvicorn>=0.27.0
 
-# Data validation (v1 - no Rust required)
-pydantic==1.10.13
+# Data validation (v2 for Py3.12 compatibility)
+pydantic>=2.5.0
+pydantic-settings>=2.0.0
 
 # HTTP client (for OpenRouter API)
-httpx==0.25.1
+httpx>=0.26.0
 
 # Environment variables
-python-dotenv==1.0.0
+python-dotenv>=1.0.0

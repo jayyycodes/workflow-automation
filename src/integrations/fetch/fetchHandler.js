@@ -19,13 +19,41 @@ const marketProviders = {
         // Auto-format Indian stocks - add .NS (NSE) if no exchange suffix
         let symbol = identifier.toUpperCase();
 
-        // Common Indian stocks that need .NS or .BO suffix
-        const indianStocks = ['SBIN', 'RELIANCE', 'TCS', 'INFY', 'HDFC', 'ICICI', 'BAJAJ', 'WIPRO', 'ONGC', 'TATA'];
-        const isIndianStock = indianStocks.some(stock => symbol.startsWith(stock)) && !symbol.includes('.');
+        // 1. Handle Commodities (Map to Global Futures or Indian ETFs)
+        const commodityMap = {
+            'GOLD': 'GC=F',             // Gold Futures (USD)
+            'GOLD_INR': 'GOLDBEES.NS',  // Nippon India ETF Gold BeES (INR)
+            'SILVER': 'SI=F',           // Silver Futures (USD)
+            'SILVER_INR': 'SILVERBEES.NS', // Nippon India ETF Silver BeES (INR)
+            'NIFTY': '^NSEI',           // Nifty 50 Index
+            'SENSEX': '^BSESN',         // Sensex Index
+            'BANKNIFTY': '^NSEBANK'     // Bank Nifty
+        };
 
-        if (isIndianStock) {
-            symbol = `${symbol}.NS`; // Add NSE exchange suffix
-            logger.info(`Auto-formatted Indian stock: ${identifier} → ${symbol}`);
+        if (commodityMap[symbol]) {
+            symbol = commodityMap[symbol];
+            logger.info(`Mapped commodity/index: ${identifier} → ${symbol}`);
+        } else {
+            // 2. Handle Indian Stock Auto-discovery
+            // List of common Indian stock prefixes (Nifty 50 + others) to auto-append .NS
+            const indianStocks = [
+                'RELIANCE', 'TCS', 'HDFCBANK', 'ICICIBANK', 'INFY', 'HUL', 'ITC', 'SBIN',
+                'BHARTIARTL', 'KOTAKBANK', 'LICI', 'LT', 'AXISBANK', 'ASIANPAINT', 'HCLTECH',
+                'MARUTI', 'TITAN', 'BAJFINANCE', 'SUNPHARMA', 'ADANIENT', 'ADANIPORTS',
+                'ULTRACEMCO', 'TATAMOTORS', 'NTPC', 'POWERGRID', 'TATASTEEL', 'WIPRO',
+                'M&M', 'JSWSTEEL', 'GRASIM', 'LTIM', 'ONGC', 'HINDALCO', 'COALINDIA',
+                'BRITANNIA', 'TECHM', 'INDUSINDBK', 'NESTLEIND', 'CIPLA', 'APOLLOHOSP',
+                'DRREDDY', 'EICHERMOT', 'DIVISLAB', 'BAJAJFINSV', 'HEROMOTOCO', 'TATACONSUM',
+                'BPCL', 'SBILIFE', 'UPL', 'ADANI', 'TATA', 'BAJAJ', 'HDFC', 'ICICI'
+            ];
+
+            // If it starts with a known Indian prefix and has no suffix, assume NSE
+            const isIndianStock = indianStocks.some(stock => symbol.startsWith(stock)) && !symbol.includes('.');
+
+            if (isIndianStock) {
+                symbol = `${symbol}.NS`; // Add NSE exchange suffix
+                logger.info(`Auto-formatted Indian stock: ${identifier} → ${symbol}`);
+            }
         }
 
         // Yahoo Finance with headers to avoid rate limiting on production servers
@@ -68,12 +96,18 @@ const marketProviders = {
         const change = price - previousClose;
         const changePercent = ((change / previousClose) * 100).toFixed(2);
 
+        // Yahoo often reports 'USD' for Indian symbols incorrectly in some endpoints
+        let currency = meta.currency;
+        if (symbol.endsWith('.NS') || symbol.endsWith('.BO') || symbol.includes('^NSE') || symbol.includes('^BSE')) {
+            currency = 'INR';
+        }
+
         return {
             symbol: identifier,
             price: price.toFixed(2),
             change: change.toFixed(2),
             changePercent: `${changePercent}%`,
-            currency: meta.currency,
+            currency: currency,
             marketState: meta.marketState,
             timestamp: new Date(meta.regularMarketTime * 1000).toISOString()
         };

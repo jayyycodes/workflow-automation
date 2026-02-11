@@ -1,5 +1,5 @@
 import express from 'express';
-import User from '../models/User.js';
+import { db } from '../config/firebase.js';
 import authMiddleware from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 
@@ -11,14 +11,17 @@ const router = express.Router();
  */
 router.get('/profile', authMiddleware, async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id);
+        const userDoc = await db.collection('users').doc(req.user.id).get();
 
-        if (!user) {
+        if (!userDoc.exists) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Remove sensitive data
+        const user = { id: userDoc.id, ...userDoc.data() };
+
+        // Remove sensitive data (though Firestore usually doesn't store password_hash if done right, but good safety)
         delete user.password_hash;
+        delete user.password;
 
         res.json({ user });
     } catch (error) {
@@ -50,15 +53,22 @@ router.put('/profile', authMiddleware, async (req, res, next) => {
             });
         }
 
-        const updatedUser = await User.updateProfile(req.user.id, {
-            phoneNumber,
-            whatsappNumber
-        });
+        const updates = {};
+        if (phoneNumber !== undefined) updates.phoneNumber = phoneNumber;
+        if (whatsappNumber !== undefined) updates.whatsappNumber = whatsappNumber;
+        updates.updated_at = new Date().toISOString();
+
+        await db.collection('users').doc(req.user.id).update(updates);
+
+        // Fetch updated user
+        const updatedDoc = await db.collection('users').doc(req.user.id).get();
+        const updatedUser = { id: updatedDoc.id, ...updatedDoc.data() };
 
         // Remove sensitive data
         delete updatedUser.password_hash;
+        delete updatedUser.password;
 
-        logger.info('User profile updated', { userId: req.user.id, phoneNumber, whatsappNumber });
+        logger.info('User profile updated', { userId: req.user.id, ...updates });
 
         res.json({
             message: 'Profile updated successfully',

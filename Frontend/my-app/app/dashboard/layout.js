@@ -1,101 +1,147 @@
 'use client';
-
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Home, Plus, Settings, LogOut, Menu, X, Terminal,
-    ChevronRight, User
+    Home, Plus, Settings, LogOut, Menu, X, Zap,
+    ChevronRight, User, LayoutGrid, FolderOpen
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { MouseGlow } from '@/components/ui/mouse-glow';
 
 export default function DashboardLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const { user, logout } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
 
     const menuItems = [
-        { icon: Home, label: 'Automations', href: '/dashboard' },
-        { icon: Plus, label: 'Create', href: '/dashboard/create' },
+        { icon: LayoutGrid, label: 'Overview', href: '/dashboard' },
+        { icon: Plus, label: 'New Workflow', href: '/dashboard/create' },
+        { icon: User, label: 'Profile', href: '/dashboard/profile' },
         { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
     ];
 
+    const isActive = (path) => pathname === path;
+
     return (
-        <div className="min-h-screen bg-black text-green-400 font-mono">
-            {/* Scanline Effect */}
-            <div className="fixed inset-0 pointer-events-none opacity-10">
-                <div className="absolute inset-0 bg-[linear-gradient(0deg,transparent_50%,rgba(34,197,94,0.03)_50%)] bg-[length:100%_4px]" />
+        <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-green-500/30 selection:text-green-200 flex">
+            <MouseGlow />
+
+            {/* Subtle Grid Background */}
+            <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:4rem_4rem]" />
             </div>
 
             {/* Mobile Menu Button */}
             <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="fixed top-4 left-4 z-50 md:hidden bg-black/60 border border-green-900 p-2 rounded-lg"
+                className="fixed top-4 left-4 z-50 md:hidden bg-[#0A0A0A] border border-white/10 p-2 rounded-lg text-white"
             >
-                {mobileMenuOpen ? <X className="w-6 h-6 text-green-500" /> : <Menu className="w-6 h-6 text-green-500" />}
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </motion.button>
 
             {/* Sidebar - Desktop */}
             <motion.aside
-                initial={{ x: 0 }}
-                animate={{ x: sidebarOpen ? 0 : -280 }}
-                className="fixed left-0 top-0 h-full w-72 bg-black/90 border-r border-green-900/50 z-40 hidden md:block backdrop-blur-sm"
+                initial={{ width: 280 }}
+                animate={{ width: sidebarOpen ? 280 : 80 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="fixed left-0 top-0 h-full bg-[#0A0A0A] border-r border-white/5 z-40 hidden md:block overflow-hidden"
             >
                 <div className="flex flex-col h-full p-6">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center gap-2 mb-8 group">
-                        <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                        >
-                            <Terminal className="w-8 h-8 text-green-500" />
-                        </motion.div>
-                        <span className="text-xl font-bold text-green-500 tracking-wider">
-                            [WORKFLOW]
-                        </span>
-                    </Link>
+                    <div className={`flex items-center gap-3 mb-10 ${!sidebarOpen ? 'justify-center' : ''}`}>
+                        <div className="bg-green-600 p-1.5 rounded-lg shadow-lg shadow-green-900/20 shrink-0">
+                            <Zap className="w-5 h-5 text-white fill-white" />
+                        </div>
+                        {sidebarOpen && (
+                            <motion.span
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="text-xl font-bold tracking-tight text-white"
+                            >
+                                SmartFlow
+                            </motion.span>
+                        )}
+                    </div>
+
+                    {/* Create New - Prominent Button */}
+                    {sidebarOpen ? (
+                        <Link href="/dashboard/create" className="mb-8">
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="w-full py-3 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium shadow-lg shadow-green-900/20 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Create Flow
+                            </motion.button>
+                        </Link>
+                    ) : (
+                        <Link href="/dashboard/create" className="mb-8 flex justify-center">
+                            <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="p-3 rounded-lg bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/20 transition-all"
+                            >
+                                <Plus className="w-5 h-5" />
+                            </motion.button>
+                        </Link>
+                    )}
 
                     {/* Navigation */}
                     <nav className="flex-1 space-y-2">
-                        {menuItems.map((item, index) => (
-                            <Link
-                                key={index}
-                                href={item.href}
-                                className="flex items-center gap-3 px-4 py-3 rounded bg-black/40 border border-green-900/50 hover:border-green-700 hover:bg-green-950/30 transition-all group"
-                            >
-                                <item.icon className="w-5 h-5 text-green-700 group-hover:text-green-500 transition" />
-                                <span className="text-green-600 group-hover:text-green-400 transition">{'>'} {item.label.toLowerCase()}</span>
-                                <ChevronRight className="w-4 h-4 ml-auto text-green-900 group-hover:text-green-700 transition" />
-                            </Link>
-                        ))}
+                        {menuItems.map((item, index) => {
+                            const active = isActive(item.href);
+                            return (
+                                <Link
+                                    key={index}
+                                    href={item.href}
+                                    className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all group relative ${active
+                                            ? 'bg-white/5 text-green-400'
+                                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                        } ${!sidebarOpen ? 'justify-center' : ''}`}
+                                >
+                                    {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-green-500 rounded-r-full" />}
+
+                                    <item.icon className={`w-5 h-5 ${active ? 'text-green-400' : 'text-gray-400 group-hover:text-white'} transition-colors`} />
+
+                                    {sidebarOpen && (
+                                        <span className="font-medium">{item.label}</span>
+                                    )}
+                                </Link>
+                            );
+                        })}
                     </nav>
 
                     {/* User Profile */}
-                    <div className="border-t border-green-900/50 pt-4">
-                        <div className="bg-black/40 border border-green-900/50 rounded p-4 mb-3">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-green-900/50 border-2 border-green-700 flex items-center justify-center">
-                                    <User className="w-5 h-5 text-green-500" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-green-400 truncate">{user?.name || 'User'}</p>
-                                    <p className="text-xs text-green-800 truncate">{user?.email || 'user@system.net'}</p>
-                                </div>
+                    <div className="border-t border-white/5 pt-4 mt-auto">
+                        <div className={`flex items-center gap-3 ${!sidebarOpen ? 'justify-center' : ''}`}>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center shrink-0">
+                                <span className="text-sm font-bold text-white">
+                                    {user?.name?.[0]?.toUpperCase() || 'U'}
+                                </span>
                             </div>
-                        </div>
 
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={logout}
-                            className="w-full flex items-center gap-3 px-4 py-3 rounded bg-red-950/50 border border-red-800 text-red-500 hover:bg-red-900/50 hover:border-red-700 transition-all"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            <span>{'>'} logout</span>
-                        </motion.button>
+                            {sidebarOpen && (
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-white truncate">{user?.name || 'User'}</p>
+                                    <p className="text-xs text-green-500 font-medium truncate">PRO PLAN</p>
+                                </div>
+                            )}
+
+                            {sidebarOpen && (
+                                <button
+                                    onClick={logout}
+                                    className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition"
+                                >
+                                    <LogOut className="w-5 h-5" />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </motion.aside>
@@ -109,58 +155,73 @@ export default function DashboardLayout({ children }) {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setMobileMenuOpen(false)}
-                            className="fixed inset-0 bg-black/80 z-30 md:hidden"
+                            className="fixed inset-0 bg-black/80 z-30 md:hidden backdrop-blur-sm"
                         />
                         <motion.aside
                             initial={{ x: -280 }}
                             animate={{ x: 0 }}
                             exit={{ x: -280 }}
-                            className="fixed left-0 top-0 h-full w-72 bg-black/95 border-r border-green-900/50 z-40 md:hidden backdrop-blur-sm"
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed left-0 top-0 h-full w-72 bg-[#0A0A0A] border-r border-white/10 z-40 md:hidden"
                         >
                             <div className="flex flex-col h-full p-6">
                                 {/* Logo */}
-                                <Link href="/" className="flex items-center gap-2 mb-8">
-                                    <Terminal className="w-8 h-8 text-green-500" />
-                                    <span className="text-xl font-bold text-green-500 tracking-wider">
-                                        [WORKFLOW]
+                                <div className="flex items-center gap-3 mb-8">
+                                    <div className="bg-green-600 p-1.5 rounded-lg shadow-lg shadow-green-900/20">
+                                        <Zap className="w-5 h-5 text-white fill-white" />
+                                    </div>
+                                    <span className="text-xl font-bold tracking-tight text-white">
+                                        SmartFlow
                                     </span>
+                                </div>
+
+                                <Link href="/dashboard/create" onClick={() => setMobileMenuOpen(false)} className="mb-8">
+                                    <button className="w-full py-3 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium shadow-lg shadow-green-900/20">
+                                        + Create Flow
+                                    </button>
                                 </Link>
 
                                 {/* Navigation */}
                                 <nav className="flex-1 space-y-2">
-                                    {menuItems.map((item, index) => (
-                                        <Link
-                                            key={index}
-                                            href={item.href}
-                                            onClick={() => setMobileMenuOpen(false)}
-                                            className="flex items-center gap-3 px-4 py-3 rounded bg-black/40 border border-green-900/50 hover:border-green-700 hover:bg-green-950/30 transition-all group"
-                                        >
-                                            <item.icon className="w-5 h-5 text-green-700 group-hover:text-green-500 transition" />
-                                            <span className="text-green-600 group-hover:text-green-400 transition">{'>'} {item.label.toLowerCase()}</span>
-                                        </Link>
-                                    ))}
+                                    {menuItems.map((item, index) => {
+                                        const active = isActive(item.href);
+                                        return (
+                                            <Link
+                                                key={index}
+                                                href={item.href}
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${active
+                                                        ? 'bg-white/5 text-green-400'
+                                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                                    }`}
+                                            >
+                                                <item.icon className="w-5 h-5" />
+                                                <span className="font-medium">{item.label}</span>
+                                            </Link>
+                                        );
+                                    })}
                                 </nav>
 
                                 {/* User Profile */}
-                                <div className="border-t border-green-900/50 pt-4">
-                                    <div className="bg-black/40 border border-green-900/50 rounded p-4 mb-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-green-900/50 border-2 border-green-700 flex items-center justify-center">
-                                                <User className="w-5 h-5 text-green-500" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-semibold text-green-400 truncate">{user?.name || 'User'}</p>
-                                                <p className="text-xs text-green-800 truncate">{user?.email || 'user@system.net'}</p>
-                                            </div>
+                                <div className="border-t border-white/5 pt-4 mt-auto">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center">
+                                            <span className="text-sm font-bold text-white">
+                                                {user?.name?.[0]?.toUpperCase() || 'U'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-white">{user?.name || 'User'}</p>
+                                            <p className="text-xs text-green-500 font-medium">PRO PLAN</p>
                                         </div>
                                     </div>
 
                                     <button
                                         onClick={logout}
-                                        className="w-full flex items-center gap-3 px-4 py-3 rounded bg-red-950/50 border border-red-800 text-red-500 hover:bg-red-900/50 hover:border-red-700 transition-all"
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all font-medium"
                                     >
                                         <LogOut className="w-5 h-5" />
-                                        <span>{'>'} logout</span>
+                                        <span>Log out</span>
                                     </button>
                                 </div>
                             </div>
@@ -170,26 +231,11 @@ export default function DashboardLayout({ children }) {
             </AnimatePresence>
 
             {/* Main Content */}
-            <main className={`min-h-screen transition-all duration-300 ${sidebarOpen ? 'md:ml-72' : 'md:ml-0'}`}>
-                <div className="p-6 md:p-8">
+            <main className={`flex-1 min-h-screen transition-all duration-300 ${sidebarOpen ? 'md:pl-72' : 'md:pl-20'} relative z-10`}>
+                <div className="p-6 md:p-10 max-w-[1600px] mx-auto">
                     {children}
                 </div>
             </main>
-
-            {/* Toggle Sidebar Button - Desktop */}
-            <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="fixed bottom-6 left-6 bg-black/60 border border-green-900 p-3 rounded-full hidden md:block z-50 hover:border-green-700 transition"
-            >
-                <motion.div
-                    animate={{ rotate: sidebarOpen ? 0 : 180 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <ChevronRight className="w-5 h-5 text-green-500" />
-                </motion.div>
-            </motion.button>
         </div>
     );
 }

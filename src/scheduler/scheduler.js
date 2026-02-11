@@ -8,8 +8,7 @@
  */
 
 import cron from 'node-cron';
-import Automation from '../models/Automation.js';
-import Execution from '../models/Execution.js';
+import { db } from '../config/firebase.js';
 import { executeWorkflow } from '../automations/workflowExecutor.js';
 import { triggerToCron, isSchedulable } from './triggerParser.js';
 import { AUTOMATION_STATUS } from '../utils/constants.js';
@@ -74,7 +73,7 @@ export const scheduleAutomation = (automation) => {
 /**
  * Unschedule an automation
  * 
- * @param {number} automationId
+ * @param {string} automationId
  */
 export const unscheduleAutomation = (automationId) => {
     if (cronJobs.has(automationId)) {
@@ -93,26 +92,35 @@ export const unscheduleAutomation = (automationId) => {
 const runScheduledExecution = async (automation) => {
     try {
         // Create execution record
-        const execution = await Execution.create({
+        const newExecution = {
             automationId: automation.id,
-            input: { triggeredBy: 'scheduler', scheduledAt: new Date().toISOString() }
-        });
+            input: { triggeredBy: 'scheduler', scheduledAt: new Date().toISOString() },
+            status: 'PENDING',
+            created_at: new Date().toISOString()
+        };
+
+        const execRef = await db.collection('executions').add(newExecution);
+        const executionId = execRef.id;
 
         logger.info('📋 Scheduled execution started', {
             automationId: automation.id,
-            executionId: execution.id
+            executionId: executionId
         });
 
         // Fetch user for personalized notifications
-        const User = (await import('../models/User.js')).default;
-        const user = await User.findById(automation.user_id);
+        const userDoc = await db.collection('users').doc(automation.user_id).get();
+        const user = userDoc.exists ? { id: userDoc.id, ...userDoc.data() } : null;
+
+        if (!user) {
+            logger.warn('User not found for scheduled execution', { userId: automation.user_id });
+        }
 
         // Execute workflow with user context
-        const result = await executeWorkflow(automation, execution.id, user);
+        const result = await executeWorkflow(automation, executionId, user);
 
         logger.info('📋 Scheduled execution completed', {
             automationId: automation.id,
-            executionId: execution.id,
+            executionId: executionId,
             status: result.status
         });
 
@@ -133,8 +141,14 @@ export const loadActiveAutomations = async () => {
         logger.info('🔄 Loading active automations for scheduling...');
 
         // Query all active automations
-        const result = await Automation.findByStatus(AUTOMATION_STATUS.ACTIVE);
-        const automations = result || [];
+        const snapshot = await db.collection('automations')
+            .where('status', '==', AUTOMATION_STATUS.ACTIVE)
+            .get();
+
+        const automations = [];
+        snapshot.forEach(doc => {
+            automations.push({ id: doc.id, ...doc.data() });
+        });
 
         logger.info(`Found ${automations.length} active automations`);
 

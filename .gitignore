@@ -3,7 +3,7 @@ node_modules/
 
 # Environment
 .env
-
+.env.example
 # Logs
 logs/
 *.log
@@ -15,3 +15,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Firebase
+serviceAccountKey.json

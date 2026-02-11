@@ -12,9 +12,9 @@ export function EmptyAutomations() {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20 px-6 font-mono"
+            className="text-center py-20 px-6 font-sans"
         >
-            {/* Animated Icon */}
+            {/* Icon */}
             <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
@@ -26,25 +26,24 @@ export function EmptyAutomations() {
                 }}
                 className="relative w-32 h-32 mx-auto mb-8"
             >
-                {/* Outer glow ring */}
+                {/* Glow effect */}
                 <motion.div
                     animate={{
                         scale: [1, 1.2, 1],
-                        opacity: [0.5, 0.8, 0.5]
+                        opacity: [0.3, 0.5, 0.3]
                     }}
                     transition={{
                         duration: 3,
                         repeat: Infinity,
                         ease: 'easeInOut'
                     }}
-                    className="absolute inset-0 rounded-full bg-green-500/20 blur-xl"
+                    className="absolute inset-0 rounded-full bg-green-500/20 blur-2xl"
                 />
 
                 {/* Icon container */}
-                <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-green-900/50 to-green-950/50 border-2 border-green-700 flex items-center justify-center backdrop-blur-sm">
+                <div className="relative w-32 h-32 rounded-2xl bg-[#0A0A0A] border border-white/10 flex items-center justify-center">
                     <motion.div
                         animate={{
-                            rotate: [0, 5, -5, 0],
                             y: [0, -5, 0]
                         }}
                         transition={{
@@ -53,7 +52,7 @@ export function EmptyAutomations() {
                             ease: 'easeInOut'
                         }}
                     >
-                        <Terminal className="w-16 h-16 text-green-400" />
+                        <Zap className="w-16 h-16 text-green-500" />
                     </motion.div>
                 </div>
 
@@ -85,9 +84,9 @@ export function EmptyAutomations() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="text-3xl font-bold mb-3 text-green-400"
+                className="text-3xl font-bold mb-3 text-white"
             >
-                {'>'} automation.init()
+                No Automations Yet
             </motion.h2>
 
             {/* Description */}
@@ -95,11 +94,9 @@ export function EmptyAutomations() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-green-700 mb-8 max-w-md mx-auto text-sm leading-relaxed"
+                className="text-gray-400 mb-8 max-w-md mx-auto text-sm leading-relaxed"
             >
-                // No automations detected in current workspace.
-                <br />
-                // Initialize first workflow by describing task in natural language.
+                Start building your first workflow by describing what you want to automate in natural language.
             </motion.p>
 
             {/* CTA Button */}
@@ -112,10 +109,10 @@ export function EmptyAutomations() {
                     <motion.button
                         whileHover={{ scale: 1.05, y: -2 }}
                         whileTap={{ scale: 0.95 }}
-                        className="px-8 py-4 rounded-lg bg-green-900/70 border-2 border-green-700 text-green-300 hover:bg-green-800/70 font-semibold flex items-center gap-2 shadow-lg shadow-green-900/30 hover:shadow-green-700/50 transition-all mx-auto group"
+                        className="px-8 py-4 rounded-lg bg-green-600 hover:bg-green-500 text-white font-semibold flex items-center gap-2 shadow-lg shadow-green-900/20 hover:shadow-green-500/20 transition-all mx-auto"
                     >
-                        <Zap className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                        {'>'} create_first_automation()
+                        <Zap className="w-5 h-5" />
+                        Create Your First Automation
                         <motion.div
                             animate={{ x: [0, 5, 0] }}
                             transition={{ duration: 1.5, repeat: Infinity }}
@@ -133,7 +130,7 @@ export function EmptyAutomations() {
                 transition={{ delay: 0.6 }}
                 className="mt-12 max-w-2xl mx-auto"
             >
-                <p className="text-xs text-green-800 mb-4">// Example workflows to get started:</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Example Workflows</p>
                 <div className="grid md:grid-cols-3 gap-3">
                     {[
                         { icon: TrendingUp, text: 'Track stock prices' },
@@ -148,11 +145,13 @@ export function EmptyAutomations() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.7 + i * 0.1 }}
                                 whileHover={{ y: -2, scale: 1.02 }}
-                                className="glass rounded-lg p-3 border border-green-900/50 hover:border-green-700/70 transition-all cursor-pointer text-left"
+                                className="bg-[#0A0A0A] rounded-lg p-4 border border-white/5 hover:border-green-500/30 transition-all cursor-pointer text-left"
                             >
-                                <div className="flex items-center gap-2">
-                                    <Icon className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                    <span className="text-xs text-green-600">{example.text}</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-green-500/10">
+                                        <Icon className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                    </div>
+                                    <span className="text-sm text-gray-300">{example.text}</span>
                                 </div>
                             </motion.div>
                         );
@@ -162,6 +161,7 @@ export function EmptyAutomations() {
         </motion.div>
     );
 }
+
 
 export function EmptySearchResults({ query, onClear }) {
     return (

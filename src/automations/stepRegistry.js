@@ -1,3 +1,13 @@
+// CRITICAL: Load environment variables FIRST before any service imports
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+
+// Now safe to import services that need environment variables
 import logger from '../utils/logger.js';
 import { sendEmail as sendEmailService } from '../integrations/email/emailService.js';
 import { fetchData, fetchStockPrice, fetchCryptoPrice } from '../integrations/fetch/fetchHandler.js';
@@ -527,6 +537,53 @@ const scrapeReddit = async (params) => {
     return result.data;
 };
 
+const scrapeScreener = async (params) => {
+    const result = await webScraper.scrapeWeb('screener', {
+        symbol: params.symbol
+    });
+    logger.info('Screener scrape completed', { symbol: params.symbol, items: result.data.items.length });
+    return result.data;
+};
+
+const scrapeGroww = async (params) => {
+    const result = await webScraper.scrapeWeb('groww', {
+        url: params.url || 'https://groww.in/gold-rates'
+    });
+    logger.info('Groww scrape completed', { items: result.data.items.length });
+    return result.data;
+};
+
+const scrapeHack2Skill = async (params) => {
+    const result = await webScraper.scrapeWeb('hack2skill', {
+        url: params.url || 'https://hack2skill.com/',
+        limit: params.limit
+    });
+    logger.info('Hack2Skill scrape completed', {
+        resultType: typeof result.data,
+        length: result.data?.length || 0
+    });
+    return result.data;
+};
+
+const scrapeTwitter = async (params) => {
+    // Determine username from params
+    // If user says "scrape twitter for nikhilkamath", params might be { query: ... } or { username: ... }
+    // We'll standardise on 'username'
+    const username = params.username || params.query;
+
+    const result = await webScraper.scrapeWeb('twitter', {
+        username: username,
+        limit: params.limit || 5
+    });
+
+    logger.info('Twitter scrape completed', {
+        username,
+        resultType: typeof result.data
+    });
+
+    return result.data;
+};
+
 const formatWebDigest = async (params, context) => {
     const provider = params.provider;
     const previousStep = context.stepOutputs?.['step_1'];
@@ -558,6 +615,10 @@ const stepRegistry = {
     scrape_github: scrapeGithub,
     scrape_hackernews: scrapeHackerNews,
     scrape_reddit: scrapeReddit,
+    scrape_screener: scrapeScreener,
+    scrape_groww: scrapeGroww,
+    scrape_hack2skill: scrapeHack2Skill,
+    scrape_twitter: scrapeTwitter,
     format_web_digest: formatWebDigest,
 
     // Utility actions

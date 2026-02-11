@@ -1,4 +1,13 @@
-import 'dotenv/config';
+// CRITICAL: Load environment variables FIRST before any other imports
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+// Now import everything else after env vars are loaded
 import express from 'express';
 import cors from 'cors';
 
@@ -7,45 +16,23 @@ import errorHandler from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.js';
 import automationRoutes from './routes/automations.js';
 import userRoutes from './routes/user.js';
-import { testConnection } from './config/db.js';
+import './config/firebase.js'; // Ensure Firebase is initialized
 import { loadActiveAutomations, getSchedulerStats } from './scheduler/scheduler.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Production security checks
-if (process.env.NODE_ENV === 'production') {
-    if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-super-secret-jwt-key-change-in-production') {
-        logger.error('🚨 CRITICAL: Change JWT_SECRET in production!');
-        process.exit(1);
-    }
-}
-
-// CORS Configuration - secure for production
-const corsOptions = {
-    origin: process.env.NODE_ENV === 'production'
-        ? process.env.FRONTEND_URL || false  // Only allow specific frontend in production
-        : true,  // Allow all in development
-    credentials: true
-};
-
 // Middleware
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(express.json());
 
-// Request logging
-app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.path}`);
-    next();
-});
-
-// Health check
+// Health check endpoint
 app.get('/health', (req, res) => {
+    const schedulerStats = getSchedulerStats();
     res.json({
-        status: 'ok',
+        status: 'healthy',
         timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        scheduler: getSchedulerStats()
+        scheduler: schedulerStats
     });
 });
 
@@ -54,64 +41,42 @@ app.use('/auth', authRoutes);
 app.use('/automations', automationRoutes);
 app.use('/user', userRoutes);
 
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({
-        error: 'Not Found',
-        message: `Route ${req.method} ${req.path} not found`
-    });
-});
-
-// Error handler
+// Error handling
 app.use(errorHandler);
 
 // Start server
-let server; // Store server instance for graceful shutdown
+const server = app.listen(PORT, async () => {
+    logger.info(`✨ Server running on port ${PORT}`);
+    logger.info(`📍 Health check: http://localhost:${PORT}/health`);
 
-const startServer = async () => {
-    // Test database connection
-    const dbConnected = await testConnection();
-
-    if (!dbConnected) {
-        logger.warn('Database connection failed. Server will start but database features may not work.');
-    }
-
-    // Initialize scheduler for active automations
-    if (dbConnected) {
+    // Load active automations after server starts
+    try {
         await loadActiveAutomations();
+        logger.info('✅ Scheduler initialized with active automations');
+    } catch (error) {
+        logger.error('Failed to load active automations:', error);
     }
+});
 
-    server = app.listen(PORT, () => {
-        logger.info(`🚀 Server running on http://localhost:${PORT}`);
-        logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
-};
+// Graceful shutdown
+const shutdown = async () => {
+    logger.info('SIGINT received. Starting graceful shutdown...');
 
-startServer();
-
-// Graceful shutdown handlers
-const shutdown = async (signal) => {
-    logger.info(`${signal} received. Starting graceful shutdown...`);
-
-    // Stop accepting new connections
     server.close(() => {
         logger.info('HTTP server closed');
     });
 
-    // Stop all scheduled jobs
-    const { stopAll } = await import('./scheduler/scheduler.js');
-    stopAll();
-
-    // Close database pool
-    const pool = (await import('./config/db.js')).default;
-    await pool.end();
-    logger.info('Database pool closed');
+    // Stop all active automation jobs
+    const { stopAllJobs } = await import('./scheduler/scheduler.js');
+    logger.info('Stopping all scheduled jobs...');
+    const stoppedCount = stopAllJobs();
+    logger.info(`Stopped ${stoppedCount} scheduled jobs`);
 
     logger.info('Graceful shutdown complete');
     process.exit(0);
 };
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 export default app;

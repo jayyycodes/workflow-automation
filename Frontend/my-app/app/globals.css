@@ -1,25 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0a0a0a;
-  --color-foreground: #f9fafb;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+  --color-background: #050505;
+  --color-foreground: #f0fdf4;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #f9fafb;
-  --primary: #3b82f6;
-  --accent: #8b5cf6;
-  --surface: #1a1a1a;
+  --background: #050505;
+  --foreground: #f0fdf4;
+  --primary: #22c55e;
 }
-
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: rgba(34, 197, 94, 0.3);
+  color: #ffffff;
 }
 
 /* Better Scrollbar */

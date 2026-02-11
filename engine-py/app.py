@@ -16,8 +16,10 @@ from typing import Optional
 from datetime import datetime
 
 from config import OPENROUTER_API_KEY, GEMINI_API_KEY, LLM_MODEL, GEMINI_MODEL, ALLOWED_STEPS
-from prompts import PARSE_INTENT_PROMPT, GENERATE_AUTOMATION_PROMPT, ENTITY_EXTRACTION_PROMPT
+from prompts import PARSE_INTENT_PROMPT, GENERATE_AUTOMATION_PROMPT, ENTITY_EXTRACTION_PROMPT, TWITTER_RESEARCH_PROMPT
+
 from validator import validate_automation, sanitize_automation
+
 from clarification import ClarificationHandler
 from required_fields import normalize_channel_response
 
@@ -418,5 +420,32 @@ async def generate_automation(request: TextRequest):
 
 
 # ============================================================
+# Twitter Research (Fallback for Scraping)
+# ============================================================
+
+@app.post("/research-twitter")
+async def research_twitter(request: TextRequest):
+    """
+    Research latest tweets/activity for a user via AI when scraping is blocked.
+    """
+    try:
+        username = request.text.replace('@', '').strip()
+        logger.info(f"🔍 Researching Twitter activity for @{username}")
+        
+        full_prompt = TWITTER_RESEARCH_PROMPT.format(username=username)
+        response_text = call_llm(full_prompt)
+        
+        return {
+            "success": True,
+            "username": username,
+            "data": response_text
+        }
+    except Exception as e:
+        logger.error(f"❌ Twitter research failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
 # Run with: uvicorn app:app --reload --port 8000
 # ============================================================
+

@@ -6,11 +6,18 @@ class SMSService {
         this.client = null;
         this.phoneNumber = null;
         this.isConfigured = false;
-
-        this.initialize();
+        this.initialized = false;
+        // Don't initialize here - wait until first use
     }
 
     initialize() {
+        // Prevent re-initialization
+        if (this.initialized) {
+            return;
+        }
+
+        this.initialized = true;
+
         const accountSid = process.env.TWILIO_ACCOUNT_SID;
         const authToken = process.env.TWILIO_AUTH_TOKEN;
         const phoneNumber = process.env.TWILIO_PHONE_NUMBER;
@@ -24,7 +31,9 @@ class SMSService {
             this.client = twilio(accountSid, authToken);
             this.phoneNumber = phoneNumber;
             this.isConfigured = true;
-            logger.info('SMS service initialized successfully');
+            logger.info('SMS service initialized successfully', {
+                phoneNumber: this.phoneNumber
+            });
         } catch (error) {
             logger.error('Failed to initialize SMS service:', error);
             this.isConfigured = false;
@@ -55,6 +64,11 @@ class SMSService {
      * @returns {Promise<Object>} Result with success status and details
      */
     async sendSMS(to, message) {
+        // Lazy initialization - initialize on first use
+        if (!this.initialized) {
+            this.initialize();
+        }
+
         if (!this.isConfigured) {
             return {
                 success: false,
@@ -100,6 +114,10 @@ class SMSService {
      * @returns {boolean}
      */
     isReady() {
+        // Lazy initialization
+        if (!this.initialized) {
+            this.initialize();
+        }
         return this.isConfigured;
     }
 
@@ -108,6 +126,10 @@ class SMSService {
      * @returns {Object}
      */
     getStatus() {
+        // Lazy initialization
+        if (!this.initialized) {
+            this.initialize();
+        }
         return {
             configured: this.isConfigured,
             phoneNumber: this.phoneNumber

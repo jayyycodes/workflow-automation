@@ -7,11 +7,19 @@ import logger from '../../utils/logger.js';
 import githubAdapter from './adapters/githubAdapter.js';
 import hackerNewsAdapter from './adapters/hackerNewsAdapter.js';
 import redditAdapter from './adapters/redditAdapter.js';
+import screenerAdapter from './adapters/screenerAdapter.js';
+import { growwAdapter } from './adapters/growwAdapter.js';
+import hack2SkillAdapter from './adapters/hack2SkillAdapter.js';
+import twitterAdapter from './adapters/twitterAdapter.js';
 
 const ADAPTERS = {
     github: githubAdapter,
     hackernews: hackerNewsAdapter,
-    reddit: redditAdapter
+    reddit: redditAdapter,
+    screener: screenerAdapter,
+    groww: growwAdapter,
+    hack2skill: hack2SkillAdapter,
+    twitter: twitterAdapter
 };
 
 export const scrapeWeb = async (provider, params) => {

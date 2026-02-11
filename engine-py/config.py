@@ -22,7 +22,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 LLM_MODEL = os.getenv("LLM_MODEL", "meta-llama/llama-3.2-3b-instruct:free")
 
 # Gemini model (backup)
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
 
 # Legacy Gemini support (commented out)
 # GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -36,6 +36,10 @@ ALLOWED_STEPS = [
     'scrape_github',
     'scrape_hackernews',
     'scrape_reddit',
+    'scrape_screener',
+    'scrape_groww',
+    'scrape_hack2skill',
+    'scrape_twitter',
     'format_web_digest',
     'send_email',
     'send_sms',

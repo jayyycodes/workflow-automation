@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import { motion, useScroll, useSpring } from 'framer-motion';
 import {
   ArrowRight, Zap, Brain, GitBranch, Clock, Mail, Database, Bot,
-  CheckCircle, Code, Workflow, Bell, TrendingUp, Briefcase, Users, Sparkles, Terminal
+  CheckCircle, Code, Workflow, Bell, TrendingUp, Briefcase, Users, Sparkles, Terminal,
+  LayoutDashboard, Activity, Loader2
 } from 'lucide-react';
 import { MouseGlow } from '@/components/ui/mouse-glow';
 
@@ -45,25 +46,14 @@ export default function LandingPage() {
     }
   };
 
-  const floatingVariants = {
-    animate: {
-      y: [0, -20, 0],
-      transition: {
-        duration: 6,
-        repeat: Infinity,
-        ease: 'easeInOut'
-      }
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-black text-green-400 relative overflow-hidden font-mono">
+    <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden font-sans selection:bg-green-500/30 selection:text-green-200">
       {/* Mouse-interactive background glow */}
       <MouseGlow />
 
-      {/* Scanline Effect */}
-      <div className="fixed inset-0 pointer-events-none opacity-10 z-10">
-        <div className="absolute inset-0 bg-[linear-gradient(0deg,transparent_50%,rgba(34,197,94,0.03)_50%)] bg-[length:100%_4px]" />
+      {/* Subtle Grid Background */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:4rem_4rem]" />
       </div>
 
       {/* Navigation */}
@@ -71,680 +61,323 @@ export default function LandingPage() {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: 'spring', stiffness: 100 }}
-        className="fixed w-full z-50 top-0"
+        className="fixed w-full z-50 top-0 backdrop-blur-md border-b border-white/5 bg-black/50"
       >
-        <div className="glass-strong border-b border-green-900/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-            <div className="flex items-center justify-between">
-              {/* Logo */}
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                >
-                  <Terminal className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
-                </motion.div>
-                <span className="text-base sm:text-xl font-bold text-green-500">
-                  [SMART_WORKFLOW]
-                </span>
-              </motion.div>
-
-              {/* Desktop Navigation */}
-              <div className="hidden md:flex items-center gap-4 lg:gap-6">
-                <a href="#features" className="text-green-600 hover:text-green-400 transition text-sm lg:text-base">{'>'}features()</a>
-                <a href="#how-it-works" className="text-green-600 hover:text-green-400 transition text-sm lg:text-base">{'>'}how_it_works()</a>
-                <a href="#use-cases" className="text-green-600 hover:text-green-400 transition text-sm lg:text-base">{'>'}use_cases()</a>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Link
-                    href="/login"
-                    className="text-green-600 hover:text-green-400 transition font-medium text-sm lg:text-base"
-                  >
-                    {'>'}login()
-                  </Link>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Link
-                    href="/register"
-                    className="bg-green-900/70 border-2 border-green-700 px-4 lg:px-6 py-2 rounded-lg font-medium shadow-lg shadow-green-500/20 hover:shadow-green-500/40 transition-shadow text-green-300 text-sm lg:text-base"
-                  >
-                    +register()
-                  </Link>
-                </motion.div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="bg-green-600 p-1.5 rounded-lg group-hover:bg-green-500 transition-colors">
+                <Zap className="w-5 h-5 text-white fill-white" />
               </div>
+              <span className="text-xl font-bold tracking-tight text-white group-hover:text-green-400 transition-colors">
+                SmartFlow
+              </span>
+            </Link>
 
-              {/* Mobile Menu Button */}
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 rounded-lg border border-green-700 text-green-400 hover:bg-green-900/30 transition"
-                aria-label="Toggle mobile menu"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {mobileMenuOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  )}
-                </svg>
-              </motion.button>
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-8">
+              <a href="#features" className="text-gray-400 hover:text-white transition font-medium text-sm">Features</a>
+              <a href="#how-it-works" className="text-gray-400 hover:text-white transition font-medium text-sm">How it Works</a>
+              <a href="#pricing" className="text-gray-400 hover:text-white transition font-medium text-sm">Pricing</a>
             </div>
 
-            {/* Mobile Menu */}
-            {mobileMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="md:hidden pt-4 pb-2 border-t border-green-900/50 mt-4"
+            {/* Auth Buttons */}
+            <div className="hidden md:flex items-center gap-4">
+              <Link
+                href="/login"
+                className="text-gray-300 hover:text-white transition font-medium text-sm uppercase tracking-wider"
               >
-                <div className="flex flex-col gap-3">
-                  <a href="#features" className="text-green-600 hover:text-green-400 transition py-2">{'>'}features()</a>
-                  <a href="#how-it-works" className="text-green-600 hover:text-green-400 transition py-2">{'>'}how_it_works()</a>
-                  <a href="#use-cases" className="text-green-600 hover:text-green-400 transition py-2">{'>'}use_cases()</a>
-                  <Link href="/login" className="text-green-600 hover:text-green-400 transition py-2">
-                    {'>'}login()
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="bg-green-900/70 border-2 border-green-700 px-6 py-2 rounded-lg font-medium shadow-lg text-green-300 text-center"
-                  >
-                    +register()
-                  </Link>
-                </div>
-              </motion.div>
-            )}
+                Log In
+              </Link>
+              <Link
+                href="/register"
+                className="bg-green-600 hover:bg-green-500 text-white px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-lg shadow-green-900/20 hover:shadow-green-500/30 uppercase tracking-wide"
+              >
+                Get Started
+              </Link>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden text-gray-400 hover:text-white"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
           </div>
         </div>
       </motion.nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 relative">
-        <div className="max-w-7xl mx-auto">
+      <section className="pt-40 pb-20 px-6 relative z-10">
+        <div className="max-w-7xl mx-auto text-center">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="max-w-4xl mx-auto text-center relative z-10"
+            className="max-w-5xl mx-auto"
           >
-            <motion.div variants={itemVariants}>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-green-500/20 text-green-400 text-sm mb-8 cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4 animate-pulse" />
-                // AI-Powered Workflow Automation
-              </motion.div>
+            <motion.div variants={itemVariants} className="flex justify-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
+                <Sparkles className="w-4 h-4" />
+                <span>AI-Powered Workflow Automation</span>
+              </div>
             </motion.div>
 
             <motion.h1
               variants={itemVariants}
-              className="text-3xl sm:text-4xl md:text-6xl font-bold mb-6 leading-tight break-words"
+              className="text-5xl sm:text-6xl md:text-7xl font-sans font-extrabold tracking-tight mb-8 leading-[1.1]"
             >
-              {'>'}BUILD_POWERFUL_{' '}
-              <span className="gradient-text">
-                AUTOMATIONS_JUST_BY_DESCRIBING_THEM
+              AUTOMATE FASTER
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-600">
+                THAN YOU CAN THINK
               </span>
             </motion.h1>
 
             <motion.p
               variants={itemVariants}
-              className="text-xl text-green-600 mb-12 max-w-2xl mx-auto"
+              className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed"
             >
-              // Visual automation for humans. Extensible for developers.
+              Build powerful workflows with AI. Connect your favorite tools, schedule tasks, and save hours every week.
             </motion.p>
 
             <motion.div
               variants={itemVariants}
-              className="flex items-center justify-center gap-4 flex-wrap"
+              className="flex items-center justify-center gap-4 mb-20"
             >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  href="/register"
-                  className="bg-green-900/70 border-2 border-green-700 px-8 py-4 rounded-lg font-semibold text-lg flex items-center gap-2 shadow-2xl shadow-green-500/30 hover:shadow-green-500/50 transition-all group text-green-300"
-                >
-                  {'>'}start_automating()
-                  <motion.div
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <ArrowRight className="w-5 h-5" />
-                  </motion.div>
-                </Link>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  href="/register"
-                  className="glass px-8 py-4 rounded-lg font-semibold text-lg transition-all hover:glass-strong text-green-400"
-                >
-                  {'>'}view_demo()
-                </Link>
-              </motion.div>
+              <Link
+                href="/register"
+                className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-green-900/20 hover:shadow-green-500/40 flex items-center gap-2"
+              >
+                Start Automating Free <ArrowRight className="w-5 h-5" />
+              </Link>
+              <Link
+                href="#demo"
+                className="bg-white/5 hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-full font-semibold text-lg transition-all backdrop-blur-sm"
+              >
+                View Demo
+              </Link>
             </motion.div>
 
-            {/* Powered by Google Gemini Badge */}
+            {/* Dashboard Preview UI */}
             <motion.div
               variants={itemVariants}
-              className="mt-6 flex items-center justify-center gap-2 text-green-400/70"
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.8 }}
+              className="relative max-w-5xl mx-auto"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
-              </svg>
-              <span className="text-sm font-mono">
-                Powered by <span className="font-semibold text-green-400">Google Gemini AI</span>
-              </span>
-            </motion.div>
+              {/* Glow Effect behind Dashboard */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl blur-lg opacity-20 pointer-events-none" />
 
-            {/* Visual Placeholder with Floating Animation */}
-            <motion.div
-              variants={floatingVariants}
-              animate="animate"
-              className="mt-16 rounded-2xl glass-strong p-8 border border-green-900/50 shadow-2xl"
-            >
-              <div className="aspect-video rounded-lg bg-black/50 flex items-center justify-center border border-green-700/50 relative overflow-hidden">
-                {/* Animated grid background */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#15803d12_1px,transparent_1px),linear-gradient(to_bottom,#15803d12_1px,transparent_1px)] bg-[size:14px_24px]" />
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.5, duration: 0.5 }}
-                  className="text-center relative z-10"
-                >
-                  <motion.div
-                    animate={{
-                      rotateY: [0, 360],
-                    }}
-                    transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-                  >
-                    <Workflow className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                  </motion.div>
-                  <p className="text-green-600">// Interactive workflow diagram</p>
-                </motion.div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Problem → Solution */}
-      <section className="py-20 px-6 relative">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="grid md:grid-cols-2 gap-12 items-center"
-          >
-            {/* Old Way */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="glass-strong p-8 rounded-2xl border border-red-900/30"
-            >
-              <h2 className="text-sm uppercase tracking-wider text-red-500 mb-4">// THE_OLD_WAY</h2>
-              <h3 className="text-2xl sm:text-3xl font-bold mb-6 text-red-500 break-words">automation_shouldn<wbr />t_be_this_hard()</h3>
-              <div className="space-y-4">
-                {[
-                  'Brittle shell scripts',
-                  'Fragmented cron orchestration',
-                  'Disposable one-off hacks',
-                  'Non-compositional workflows'
-                ].map((pain, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
-                    className="flex items-start gap-3 text-green-700"
-                  >
-                    <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0 animate-pulse" />
-                    <span className="text-red-500">// {pain}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* New Way */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="glass-strong p-8 rounded-2xl border border-green-500/30"
-            >
-              <h2 className="text-sm uppercase tracking-wider text-green-400 mb-4">// THE_NEW_WAY</h2>
-              <h3 className="text-3xl sm:text-4xl font-bold mb-6 text-green-400 break-words">describe_it<wbr />.done()</h3>
-              <div className="space-y-4">
-                {[
-                  'Describe → Deploy',
-                  'Visual control, zero constraints',
-                  'Reusable primitives',
-                  'Unified automation platform',
-                  'Intent-aware AI'
-                ].map((solution, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: 20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
-                    className="flex items-start gap-3"
-                  >
-                    <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-green-400">{solution}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="py-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 gradient-text break-words">{'>'}HOW_IT_WORKS()</h2>
-            <p className="text-xl text-green-600">// From idea to automation in seconds</p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-4 gap-8">
-            {[
-              {
-                step: '01',
-                icon: <Brain className="w-8 h-8" />,
-                title: 'describe_task',
-                description: 'Plain English instructions. Zero jargon.'
-              },
-              {
-                step: '02',
-                icon: <Sparkles className="w-8 h-8" />,
-                title: 'ai_extracts_intent',
-                description: 'AI infers execution primitives.'
-              },
-              {
-                step: '03',
-                icon: <GitBranch className="w-8 h-8" />,
-                title: 'workflow_built',
-                description: 'Automated assembly. Visual graph.'
-              },
-              {
-                step: '04',
-                icon: <Zap className="w-8 h-8" />,
-                title: 'automation_runs',
-                description: 'Instant deployment. Infinite triggers.'
-              }
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }}
-                whileHover={{ y: -10, scale: 1.05 }}
-                className="relative group"
-              >
-                <div className="glass-strong rounded-xl p-6 h-full border border-green-900/50 hover:border-green-500/50 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-green-500/20">
-                  <motion.div
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.6 }}
-                    className="text-green-500 mb-4"
-                  >
-                    {item.icon}
-                  </motion.div>
-                  <div className="text-6xl font-bold text-green-950 mb-2 opacity-20">{item.step}</div>
-                  <h4 className="text-xl font-semibold mb-3 text-green-400">${item.title}()</h4>
-                  <p className="text-green-700 text-sm">// {item.description}</p>
+              <div className="bg-[#0A0A0A] border border-white/10 rounded-xl overflow-hidden shadow-2xl relative">
+                {/* Dashboard Header */}
+                <div className="border-b border-white/10 p-4 flex items-center justify-between bg-black/40 backdrop-blur-sm">
+                  <div className="flex items-center gap-8">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-green-600/20 p-1.5 rounded-lg">
+                        <Zap className="w-4 h-4 text-green-500 fill-green-500" />
+                      </div>
+                      <span className="font-bold text-white">SmartFlow</span>
+                    </div>
+                    <div className="hidden md:flex items-center gap-6 text-sm text-gray-400 font-medium">
+                      <div className="text-white px-3 py-1 bg-white/5 rounded-md cursor-pointer hover:bg-white/10 transition">+ New Workflow</div>
+                      <div className="text-green-500 flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /> Dashboard</div>
+                      <div className="hover:text-white cursor-pointer transition flex items-center gap-2"><Activity className="w-4 h-4" /> My Automations</div>
+                      <div className="hover:text-white cursor-pointer transition">Security</div>
+                    </div>
+                  </div>
                 </div>
-                {i < 3 && (
-                  <motion.div
-                    initial={{ scaleX: 0 }}
-                    whileInView={{ scaleX: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.15 + 0.3, duration: 0.5 }}
-                    className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5 bg-gradient-to-r from-green-500 to-green-700 origin-left"
-                  />
-                )}
-              </motion.div>
-            ))}
-          </div>
+
+                {/* Dashboard Content */}
+                <div className="p-8 grid md:grid-cols-3 gap-6 bg-[#0c0c0c]">
+                  {/* Overview Section */}
+                  <div className="col-span-3 mb-4">
+                    <h3 className="text-xl font-bold text-white mb-1">Overview</h3>
+                    <div className="flex items-center gap-2 text-green-500 text-sm font-medium">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      System Operational
+                    </div>
+                  </div>
+
+                  {/* Stat Cards */}
+                  <div className="bg-[#111] p-6 rounded-2xl border border-white/5 hover:border-green-500/30 transition-colors group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 text-green-500/20 group-hover:text-green-500/40 transition-colors">
+                      <Zap className="w-12 h-12" />
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 bg-green-500/10 rounded-lg text-green-500"><Zap className="w-5 h-5" /></div>
+                      <span className="text-xs font-bold bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full">+12%</span>
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-1">1,284</div>
+                    <div className="text-sm text-gray-400">Total Executions</div>
+                  </div>
+
+                  <div className="bg-[#111] p-6 rounded-2xl border border-white/5 hover:border-green-500/30 transition-colors group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 text-green-500/20 group-hover:text-green-500/40 transition-colors">
+                      <Activity className="w-12 h-12" />
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 bg-green-500/10 rounded-lg text-green-500"><Activity className="w-5 h-5" /></div>
+                      <span className="text-xs font-bold bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full">+0.2%</span>
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-1">99.9%</div>
+                    <div className="text-sm text-gray-400">Success Rate</div>
+                  </div>
+
+                  <div className="bg-[#111] p-6 rounded-2xl border border-white/5 hover:border-green-500/30 transition-colors group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 text-green-500/20 group-hover:text-green-500/40 transition-colors">
+                      <Clock className="w-12 h-12" />
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 bg-green-500/10 rounded-lg text-green-500"><Clock className="w-5 h-5" /></div>
+                      <span className="text-xs font-bold bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full">-15ms</span>
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-1">340ms</div>
+                    <div className="text-sm text-gray-400">Avg Duration</div>
+                  </div>
+
+                  {/* Recent Workflows */}
+                  <div className="col-span-3 mt-4">
+                    <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Recent Workflows</h4>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="bg-[#111] p-5 rounded-xl border border-white/5 flex items-center justify-between group hover:border-green-500/30 transition-all">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                            <span className="font-bold text-white">Daily Stock Analysis</span>
+                          </div>
+                          <p className="text-xs text-gray-500">Fetch AAPL close price, analyze with Gemini...</p>
+                        </div>
+                        <div className="text-green-500 text-xs font-bold bg-green-900/20 px-3 py-1 rounded-full flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Running
+                        </div>
+                      </div>
+
+                      <div className="bg-[#111] p-5 rounded-xl border border-white/5 flex items-center justify-between group hover:border-green-500/30 transition-all">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                            <span className="font-bold text-white">New Lead Enrichment</span>
+                          </div>
+                          <p className="text-xs text-gray-500">Enrich email from webhook using Clearbit...</p>
+                        </div>
+                        <div className="text-gray-500 text-xs font-bold bg-white/5 px-3 py-1 rounded-full flex items-center gap-1">
+                          paused
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Key Features */}
-      <section id="features" className="py-20 px-6 relative">
-        <div className="max-w-7xl mx-auto">
+      {/* Features Grid */}
+      <section id="features" className="py-32 relative bg-[#080808]">
+        <div className="max-w-7xl mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-20"
           >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-green-400 break-words">{'>'}EVERYTHING_YOU_NEED()</h2>
-            <p className="text-xl text-green-600">// Powerful features for any automation workflow</p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">Everything you need to <span className="text-white">scale</span></h2>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              Powerful primitives for any automation workflow. Built for developers and humans alike.
+            </p>
           </motion.div>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={containerVariants}
-            className="grid md:grid-cols-3 gap-6"
-          >
+          <div className="grid md:grid-cols-3 gap-8">
             {[
               {
                 icon: <Brain className="w-6 h-6" />,
-                title: 'natural_language_input',
-                description: 'English → Executable workflows'
+                title: "Natural Language",
+                description: "Describe your intent in plain English. Our AI engine translates it into executable code."
               },
               {
                 icon: <GitBranch className="w-6 h-6" />,
-                title: 'visual_composition',
-                description: 'Compose visually. Deploy instantly.'
+                title: "Visual Builder",
+                description: "Visualize your logic with our graph-based editor. Drag, drop, and connect nodes."
               },
               {
                 icon: <Clock className="w-6 h-6" />,
-                title: 'temporal_scheduling',
-                description: 'Cron, webhooks, intervals, manual'
-              },
-              {
-                icon: <Mail className="w-6 h-6" />,
-                title: 'multi_channel_delivery',
-                description: 'Email, SMS, WhatsApp orchestration'
+                title: "Smart Scheduling",
+                description: "Run cron jobs, set intervals, or trigger based on external webhooks."
               },
               {
                 icon: <Database className="w-6 h-6" />,
-                title: 'universal_integration',
-                description: 'REST APIs, web scraping, data feeds'
+                title: "Integrations",
+                description: "Connect with Postgres, Firebase, Airtable, and any REST API effortlessly."
               },
               {
                 icon: <Zap className="w-6 h-6" />,
-                title: 'production_grade',
-                description: 'Observable, resilient, scalable'
-              }
+                title: "Enterprise Secure",
+                description: "Your data is encrypted. Execution runs in isolated sandboxes for maximum security."
+              },
+              {
+                icon: <LayoutDashboard className="w-6 h-6" />,
+                title: "Instant Deploy",
+                description: "One click to production. We handle the infrastructure, scaling, and monitoring."
+              },
             ].map((feature, i) => (
               <motion.div
                 key={i}
-                variants={itemVariants}
-                whileHover={{ y: -5, scale: 1.02 }}
-                className="glass rounded-xl p-6 border border-green-900/50 hover:border-green-500/30 transition-all duration-300 group cursor-pointer"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                whileHover={{ y: -5 }}
+                className="bg-[#111] p-8 rounded-2xl border border-white/5 hover:border-green-500/20 transition-all group"
               >
-                <motion.div
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="w-12 h-12 rounded-lg bg-green-900/50 border border-green-700/50 p-2.5 flex items-center justify-center text-green-400 mb-4 shadow-lg group-hover:shadow-xl transition-shadow"
-                >
+                <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center text-green-500 mb-6 group-hover:scale-110 transition-transform">
                   {feature.icon}
-                </motion.div>
-                <h4 className="text-lg font-semibold mb-2 text-green-400">${feature.title}()</h4>
-                <p className="text-green-700 text-sm">// {feature.description}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Use Cases */}
-      <section id="use-cases" className="py-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 gradient-text break-words">{'>'}WHAT_YOU_CAN_BUILD()</h2>
-            <p className="text-xl text-green-600">// Real workflows people are automating right now</p>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={containerVariants}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {[
-              {
-                icon: <TrendingUp className="w-6 h-6" />,
-                title: 'stock_price_alerts',
-                description: 'Real-time market surveillance. Threshold-based alerts.',
-                tags: ['Finance', 'Monitoring']
-              },
-              {
-                icon: <Briefcase className="w-6 h-6" />,
-                title: 'job_alert_system',
-                description: 'Intelligent aggregation. Curated daily digests.',
-                tags: ['Career', 'Scraping']
-              },
-              {
-                icon: <Mail className="w-6 h-6" />,
-                title: 'email_automation',
-                description: 'Smart triage. Conditional routing. Auto-responses.',
-                tags: ['Productivity', 'Email']
-              },
-              {
-                icon: <Bell className="w-6 h-6" />,
-                title: 'monitoring_alerts',
-                description: 'Uptime tracking. Health checks. Proactive notifications.',
-                tags: ['DevOps', 'Observability']
-              },
-              {
-                icon: <Database className="w-6 h-6" />,
-                title: 'data_pipelines',
-                description: 'Automated ETL. Cross-system orchestration.',
-                tags: ['Data', 'Integration']
-              },
-              {
-                icon: <Bot className="w-6 h-6" />,
-                title: 'ai_driven_decisions',
-                description: 'Autonomous analysis. Intelligent classification.',
-                tags: ['AI', 'Automation']
-              }
-            ].map((useCase, i) => (
-              <motion.div
-                key={i}
-                variants={itemVariants}
-                whileHover={{ y: -5, scale: 1.02 }}
-                className="glass rounded-xl p-6 border border-green-900/50 hover:border-green-500/30 transition-all duration-300 group cursor-pointer"
-              >
-                <motion.div
-                  whileHover={{ scale: 1.1, rotate: -5 }}
-                  className="w-12 h-12 rounded-lg bg-green-900/50 border border-green-700/50 p-2.5 flex items-center justify-center text-green-400 mb-4 shadow-lg"
-                >
-                  {useCase.icon}
-                </motion.div>
-                <h4 className="text-xl font-semibold mb-2 text-green-400">${useCase.title}()</h4>
-                <p className="text-green-700 mb-4 text-sm">// {useCase.description}</p>
-                <div className="flex gap-2 flex-wrap">
-                  {useCase.tags.map((tag, j) => (
-                    <motion.span
-                      key={j}
-                      whileHover={{ scale: 1.1 }}
-                      className="text-xs px-3 py-1 rounded-full glass text-green-500 border border-green-900/50"
-                    >
-                      [{tag}]
-                    </motion.span>
-                  ))}
                 </div>
+                <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
+                <p className="text-gray-400 leading-relaxed">
+                  {feature.description}
+                </p>
               </motion.div>
             ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Why Different */}
-      <section className="py-20 px-6 relative">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-green-400 break-words">{'>'}WHY_CHOOSE_US()</h2>
-            <p className="text-xl text-green-600">// Built different from the ground up</p>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={containerVariants}
-            className="grid md:grid-cols-2 gap-8"
-          >
-            {[
-              {
-                title: 'ai_first_architecture',
-                description: 'Intent → Implementation. Zero manual configuration.',
-                comparison: 'vs. brittle_hardcoded_logic'
-              },
-              {
-                title: 'declarative_synthesis',
-                description: 'Describe outcomes. AI orchestrates execution.',
-                comparison: 'vs. imperative_step_by_step'
-              },
-              {
-                title: 'universal_extensibility',
-                description: 'Natural language for humans. Full API for developers.',
-                comparison: 'vs. constrained_walled_gardens'
-              },
-              {
-                title: 'production_first',
-                description: 'Observable, resilient, scalable from day one.',
-                comparison: 'vs. mvp_technical_debt'
-              }
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                variants={itemVariants}
-                whileHover={{ scale: 1.02 }}
-                className="glass-strong rounded-xl p-4 border border-green-900/50 hover:border-green-500/30 transition-all duration-300"
-              >
-                <h4 className="text-xl font-bold mb-3 gradient-text">
-                  ${item.title}()
-                </h4>
-                <p className="text-green-400 mb-4">// {item.description}</p>
-                <div className="text-sm text-green-800 italic">// {item.comparison}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="py-32 px-6 relative">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 break-words">
-              {'>'}stop_writing_<wbr />scripts()
-              <br />
-              <span className="gradient-text">
-                {'>'}start_automating_<wbr />ideas()
-              </span>
-            </h2>
-            <p className="text-xl text-green-600 mb-12">
-              // Join the automation revolution
-            </p>
-            <div className="flex items-center justify-center gap-4 flex-wrap">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  href="/register"
-                  className="bg-green-900/70 border-2 border-green-700 px-10 py-5 rounded-lg font-semibold text-xl flex items-center gap-2 shadow-2xl shadow-green-500/30 hover:shadow-green-500/50 transition-all group text-green-300"
-                >
-                  {'>'}start_automating_free()
-                  <motion.div
-                    animate={{ x: [0, 5, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <ArrowRight className="w-6 h-6" />
-                  </motion.div>
-                </Link>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <button className="text-green-600 hover:text-green-400 transition text-lg">
-                  {'>'}talk_to_our_team() →
-                </button>
-              </motion.div>
-            </div>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.5 }}
-              className="text-sm text-green-800 mt-8"
-            >
-              // No credit card required • 14-day free trial • Cancel anytime
-            </motion.p>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-green-900/50 py-12 px-6 glass">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Terminal className="w-6 h-6 text-green-500" />
-                <span className="text-lg font-bold text-green-400">[SMART_WORKFLOW]</span>
-              </div>
-              <p className="text-green-700 text-sm">
-                // Automate anything. Visually. Intelligently.
-              </p>
+      <footer className="py-12 px-6 border-t border-white/5 bg-black">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-2">
+            <div className="bg-green-600 p-1 rounded-md">
+              <Zap className="w-4 h-4 text-white fill-white" />
             </div>
-            <div>
-              <h5 className="font-semibold mb-3 text-green-400">$product()</h5>
-              <ul className="space-y-2 text-green-700 text-sm">
-                <li><a href="#features" className="hover:text-green-400 transition">{'>'}features</a></li>
-                <li><a href="#" className="hover:text-green-400 transition">{'>'}pricing</a></li>
-                <li><a href="#" className="hover:text-green-400 transition">{'>'}documentation</a></li>
-                <li><a href="#" className="hover:text-green-400 transition">{'>'}api_reference</a></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-semibold mb-3 text-green-400">$company()</h5>
-              <ul className="space-y-2 text-green-700 text-sm">
-                <li><a href="#" className="hover:text-green-400 transition">{'>'}about</a></li>
-                <li><a href="#" className="hover:text-green-400 transition">{'>'}blog</a></li>
-                <li><a href="#" className="hover:text-green-400 transition">{'>'}careers</a></li>
-                <li><a href="#" className="hover:text-green-400 transition">{'>'}contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-semibold mb-3 text-green-400">$legal()</h5>
-              <ul className="space-y-2 text-green-700 text-sm">
-                <li><a href="#" className="hover:text-green-400 transition">{'>'}privacy</a></li>
-                <li><a href="#" className="hover:text-green-400 transition">{'>'}terms</a></li>
-                <li><a href="#" className="hover:text-green-400 transition">{'>'}security</a></li>
-              </ul>
-            </div>
+            <span className="text-lg font-bold text-white tracking-tight">SmartFlow</span>
           </div>
-          <div className="border-t border-green-900/50 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-green-700 text-sm">// © 2024 Smart Workflow. All rights reserved.</p>
-            <div className="flex gap-6 text-green-700">
-              <a href="#" className="hover:text-green-400 transition">{'>'}twitter</a>
-              <a href="#" className="hover:text-green-400 transition">{'>'}github</a>
-              <a href="#" className="hover:text-green-400 transition">{'>'}linkedin</a>
-            </div>
+
+          <div className="flex gap-8 text-sm text-gray-500 font-medium">
+            <a href="#" className="hover:text-white transition">Features</a>
+            <a href="#" className="hover:text-white transition">How it Works</a>
+            <a href="#" className="hover:text-white transition">Pricing</a>
+          </div>
+
+          <div className="flex gap-6">
+            <a href="#" className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-500 transition">Log In</a>
+            <a href="#" className="text-gray-400 hover:text-white text-sm font-medium py-2">Get Started</a>
           </div>
         </div>
       </footer>
-
-      {/* Scroll Progress Bar */}
-      <motion.div
-        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 via-green-600 to-green-700 origin-left z-50"
-        style={{ scaleX: scaleProgress }}
-      />
     </div>
   );
 }

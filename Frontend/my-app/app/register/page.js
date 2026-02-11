@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, User, ArrowRight, Terminal, AlertCircle, Phone } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Zap, AlertCircle, Phone, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/providers/auth-provider';
 import Link from 'next/link';
+import { MouseGlow } from '@/components/ui/mouse-glow';
 
 export default function RegisterPage() {
     const [name, setName] = useState('');
@@ -21,9 +22,9 @@ export default function RegisterPage() {
 
     const getPasswordStrength = (pwd) => {
         if (!pwd) return { strength: 0, label: '', color: '' };
-        if (pwd.length < 6) return { strength: 1, label: '[WEAK]', color: 'bg-red-800' };
-        if (pwd.length < 10) return { strength: 2, label: '[MEDIUM]', color: 'bg-yellow-800' };
-        return { strength: 3, label: '[STRONG]', color: 'bg-green-800' };
+        if (pwd.length < 6) return { strength: 1, label: 'Weak', color: 'bg-red-500' };
+        if (pwd.length < 10) return { strength: 2, label: 'Medium', color: 'bg-yellow-500' };
+        return { strength: 3, label: 'Strong', color: 'bg-green-500' };
     };
 
     const passwordStrength = getPasswordStrength(password);
@@ -74,16 +75,13 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-green-400 flex items-center justify-center p-6 relative overflow-hidden font-mono">
-            {/* Matrix Background */}
-            <div className="fixed inset-0 opacity-20">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-900/30 rounded-full blur-[150px] animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-950/30 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '1s' }} />
-            </div>
+        <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-green-500/30 selection:text-green-200">
+            {/* Mouse-interactive background glow */}
+            <MouseGlow />
 
-            {/* Scanline Effect */}
-            <div className="fixed inset-0 pointer-events-none opacity-10">
-                <div className="absolute inset-0 bg-[linear-gradient(0deg,transparent_50%,rgba(34,197,94,0.03)_50%)] bg-[length:100%_4px]" />
+            {/* Subtle Grid Background */}
+            <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:4rem_4rem]" />
             </div>
 
             <motion.div
@@ -92,149 +90,167 @@ export default function RegisterPage() {
                 transition={{ duration: 0.5 }}
                 className="w-full max-w-md relative z-10"
             >
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2, type: 'spring' }}
-                    className="flex items-center justify-center gap-2 mb-8"
-                >
-                    <Terminal className="w-10 h-10 text-green-500" />
-                    <span className="text-2xl font-bold text-green-500 tracking-wider">
-                        [USER_INIT]
-                    </span>
-                </motion.div>
+                {/* Logo */}
+                <div className="flex justify-center mb-8">
+                    <Link href="/" className="flex items-center gap-2 group">
+                        <div className="bg-green-600 p-1.5 rounded-lg group-hover:bg-green-500 transition-colors shadow-lg shadow-green-900/20">
+                            <Zap className="w-5 h-5 text-white fill-white" />
+                        </div>
+                        <span className="text-xl font-bold tracking-tight text-white group-hover:text-green-400 transition-colors">
+                            SmartFlow
+                        </span>
+                    </Link>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-black/60 border border-green-800 rounded p-8 shadow-2xl shadow-green-900/30"
-                >
-                    <h1 className="text-3xl font-bold mb-2 text-green-400">{'>'} create_account()</h1>
-                    <p className="text-green-700 mb-8 text-sm">// Initialize new user credentials</p>
+                {/* Register Card */}
+                <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                    {/* Top Glow */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent opacity-50" />
+
+                    <div className="text-center mb-8">
+                        <h1 className="text-2xl font-bold text-white mb-2">Create an account</h1>
+                        <p className="text-gray-400 text-sm">Join the automation revolution today</p>
+                    </div>
 
                     {validationErrors.general && (
                         <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="mb-6 p-4 rounded bg-red-900/20 border border-red-800 flex items-start gap-3"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3"
                         >
-                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-500">{validationErrors.general}</p>
+                            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-red-400">{validationErrors.general}</p>
                         </motion.div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <Input
-                            label="$ username"
-                            type="text"
-                            placeholder="john_doe"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            icon={User}
-                            required
-                            error={validationErrors.name}
-                        />
-
-                        <Input
-                            label="$ email"
-                            type="email"
-                            placeholder="user@system.net"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            icon={Mail}
-                            required
-                            error={validationErrors.email}
-                        />
-
-                        <div>
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">Full Name</label>
                             <Input
-                                label="$ password"
+                                type="text"
+                                placeholder="John Doe"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                icon={User}
+                                required
+                                error={validationErrors.name}
+                                className="bg-[#111] border-white/5 focus:border-green-500/50 text-white placeholder:text-gray-600 h-11"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">Email</label>
+                            <Input
+                                type="email"
+                                placeholder="name@company.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                icon={Mail}
+                                required
+                                error={validationErrors.email}
+                                className="bg-[#111] border-white/5 focus:border-green-500/50 text-white placeholder:text-gray-600 h-11"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">Password</label>
+                            <Input
                                 type="password"
-                                placeholder="••••••••"
+                                placeholder="Create a password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 icon={Lock}
                                 required
                                 error={validationErrors.password}
+                                className="bg-[#111] border-white/5 focus:border-green-500/50 text-white placeholder:text-gray-600 h-11"
                             />
                             {password && (
-                                <div className="mt-2">
-                                    <div className="flex gap-1 mb-1">
+                                <div className="mt-2 pl-1">
+                                    <div className="flex gap-1 mb-1 items-center">
                                         {[1, 2, 3].map((level) => (
                                             <div
                                                 key={level}
-                                                className={`h-1 flex-1 rounded ${level <= passwordStrength.strength
-                                                        ? passwordStrength.color
-                                                        : 'bg-gray-800'
+                                                className={`h-1 flex-1 rounded-full transition-all duration-300 ${level <= passwordStrength.strength
+                                                    ? passwordStrength.color
+                                                    : 'bg-white/10'
                                                     }`}
                                             />
                                         ))}
+                                        <span className={`text-xs font-medium ml-2 ${passwordStrength.strength === 1 ? 'text-red-500' :
+                                                passwordStrength.strength === 2 ? 'text-yellow-500' :
+                                                    passwordStrength.strength === 3 ? 'text-green-500' : 'text-gray-500'
+                                            }`}>
+                                            {passwordStrength.label}
+                                        </span>
                                     </div>
-                                    <p className="text-xs text-green-700">{passwordStrength.label}</p>
                                 </div>
                             )}
                         </div>
 
-                        <Input
-                            label="$ phone (Required for Notifications)"
-                            type="tel"
-                            placeholder="+91987XXXXX0"
-                            value={whatsappNumber}
-                            onChange={(e) => setWhatsappNumber(e.target.value)}
-                            icon={Phone}
-                            helper="Used for WhatsApp & SMS notifications (with country code)"
-                            required
-                            error={validationErrors.whatsappNumber}
-                        />
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-1">WhatsApp Number</label>
+                            <Input
+                                type="tel"
+                                placeholder="+1234567890"
+                                value={whatsappNumber}
+                                onChange={(e) => setWhatsappNumber(e.target.value)}
+                                icon={Phone}
+                                helper="For notifications (with country code)"
+                                required
+                                error={validationErrors.whatsappNumber}
+                                className="bg-[#111] border-white/5 focus:border-green-500/50 text-white placeholder:text-gray-600 h-11"
+                            />
+                        </div>
 
-                        <label className="flex items-start gap-3 cursor-pointer text-sm">
+                        <label className="flex items-start gap-3 cursor-pointer text-sm group">
                             <input
                                 type="checkbox"
                                 required
-                                className="mt-1 rounded border-green-800 bg-black"
+                                className="mt-1 w-4 h-4 rounded border-white/10 bg-[#111] text-green-600 focus:ring-green-500/20 focus:ring-offset-0 transition"
                             />
-                            <span className="text-green-700">
-                                // I agree to the{' '}
-                                <a href="#" className="text-green-500 hover:text-green-300 underline">
+                            <span className="text-gray-400 group-hover:text-gray-300 transition">
+                                I agree to the{' '}
+                                <Link href="#" className="text-green-500 hover:text-green-400 font-medium">
                                     Terms of Service
-                                </a>
+                                </Link>
+                                {' '}and{' '}
+                                <Link href="#" className="text-green-500 hover:text-green-400 font-medium">
+                                    Privacy Policy
+                                </Link>
                             </span>
                         </label>
 
                         <Button
                             type="submit"
-                            className="w-full bg-green-900/70 border-2 border-green-700 text-green-300 hover:bg-green-800/70 shadow-lg shadow-green-900/30"
+                            className="w-full bg-green-600 hover:bg-green-500 text-white h-11 rounded-lg font-semibold shadow-lg shadow-green-900/20 hover:shadow-green-500/20 transition-all duration-300"
                             disabled={isLoading}
                         >
                             {isLoading ? (
-                                '// initializing...'
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>Creating Account...</span>
+                                </div>
                             ) : (
-                                <>
-                                    {'>'} register_user <ArrowRight className="w-4 h-4 ml-2" />
-                                </>
+                                <span className="flex items-center gap-2">
+                                    Create Account <ArrowRight className="w-4 h-4" />
+                                </span>
                             )}
                         </Button>
                     </form>
 
-                    <div className="mt-6 text-center text-sm text-green-700">
-                        // Already registered?{' '}
-                        <Link href="/login" className="text-green-500 hover:text-green-300 font-semibold transition">
-                            login()
+                    <div className="mt-8 pt-6 border-t border-white/5 text-center text-sm text-gray-500">
+                        Already have an account?{' '}
+                        <Link href="/login" className="text-green-500 hover:text-green-400 font-semibold transition">
+                            Log in
                         </Link>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="mt-6 text-center"
-                >
-                    <Link href="/" className="text-green-700 hover:text-green-500 transition text-sm">
-                        {'<'} return_home
+                <div className="mt-8 text-center">
+                    <Link href="/" className="text-gray-500 hover:text-gray-300 transition text-sm flex items-center justify-center gap-2">
+                        &larr; Back to Home
                     </Link>
-                </motion.div>
+                </div>
             </motion.div>
         </div>
     );

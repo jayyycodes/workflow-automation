@@ -1,5 +1,6 @@
 import authService from '../services/authService.js';
 import logger from '../utils/logger.js';
+import { db } from '../config/firebase.js';
 
 /**
  * JWT Authentication middleware
@@ -19,7 +20,7 @@ const authMiddleware = async (req, res, next) => {
 
         const token = authHeader.split(' ')[1];
 
-        // Verify token
+        // Verify token (Custom JWT)
         const decoded = authService.verifyToken(token);
 
         if (!decoded) {
@@ -29,27 +30,44 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
-        // Fetch full user object from database
-        const User = (await import('../models/User.js')).default;
-        const user = await User.findById(decoded.userId);
+        // Fetch full user object from Firestore
+        const userDoc = await db.collection('users').doc(decoded.userId).get();
 
-        if (!user) {
+        if (!userDoc.exists) {
             return res.status(401).json({
                 error: 'Unauthorized',
                 message: 'User not found'
             });
         }
 
-        // Attach full user object to request (id, email, name)
+        const userData = userDoc.data();
+        const user = {
+            id: userDoc.id,
+            email: userData.email,
+            name: userData.name,
+            whatsappNumber: userData.whatsapp_number
+        };
+
+        // Attach full user object to request
         req.user = user;
         logger.debug('User authenticated', { userId: user.id, email: user.email });
 
         next();
     } catch (error) {
         logger.error('Auth middleware error', error);
-        return res.status(401).json({
-            error: 'Unauthorized',
-            message: 'Authentication failed'
+
+        // Differentiate between Auth errors and Server errors
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return res.status(401).json({
+                error: 'Unauthorized',
+                message: 'Invalid or expired token'
+            });
+        }
+
+        // For other errors (database, etc), return 500
+        return res.status(500).json({
+            error: 'Internal Server Error',
+            message: 'Authentication service error'
         });
     }
 };

@@ -227,16 +227,102 @@ Output:
   ]
 }}
 
-Example 5 (Manual trigger):
-Input: "Get SBIN stock price and notify me"
+    {{"type": "send_email", "to": "user@example.com", "subject": "SBIN Stock Update", "body": "Your SBIN stock price update is ready"}}
+  ]
+}}
+
+Example 6 (Commodities & Indices):
+Input: "Send me updates on GOLD price every 2 min"
 Output:
 {{
-  "name": "SBIN Stock Price Alert", 
-  "description": "Fetch SBIN stock price and send email notification",
+  "name": "Gold Price Monitor",
+  "description": "Fetch GOLD price every 2 minutes and send email notification",
+  "trigger": {{"type": "interval", "every": "2m"}},
+  "steps": [
+    {{"type": "fetch_stock_price", "symbol": "GOLD"}},
+    {{"type": "send_email", "to": "user@example.com", "subject": "Gold Price Update", "body": "Current GOLD prices"}}
+  ]
+}}
+
+Example 6.5 (Commodities in INR):
+Input: "Track GOLD price in INR every hour"
+Output:
+{{
+  "name": "Gold INR Monitor",
+  "description": "Fetch GOLD price in INR hourly",
+  "trigger": {{"type": "interval", "every": "1h"}},
+  "steps": [
+    {{"type": "scrape_groww", "url": "https://groww.in/gold-rates"}},
+    {{"type": "format_web_digest", "provider": "groww"}},
+    {{"type": "send_email", "to": "user@example.com", "subject": "Gold Rate INR (10gm)", "body": "Digest below"}}
+  ]
+}}
+
+Example 7 (Indian Indices):
+Input: "Alert me on NIFTY 50 changes hourly"
+Output:
+{{
+  "name": "Nifty 50 Hourly Monitor",
+  "description": "Fetch NIFTY index every hour and notify",
+  "trigger": {{"type": "interval", "every": "1h"}},
+  "steps": [
+    {{"type": "fetch_stock_price", "symbol": "NIFTY"}},
+    {{"type": "send_notification", "message": "NIFTY 50 Index Update"}}
+  ]
+}}
+Example 8 (Stock Press Releases):
+Input: "Update me about press releases of HCLTECH"
+Output:
+{{
+  "name": "HCLTECH Press Releases",
+  "description": "Fetch top 5 press releases for HCLTECH",
   "trigger": {{"type": "manual"}},
   "steps": [
-    {{"type": "fetch_stock_price", "symbol": "SBIN"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "SBIN Stock Update", "body": "Your SBIN stock price update is ready"}}
+    {{"type": "scrape_screener", "symbol": "HCLTECH"}},
+    {{"type": "format_web_digest", "provider": "screener"}},
+    {{"type": "send_email", "to": "user@example.com", "subject": "HCLTECH Press Releases", "body": "Digest below"}}
+  ]
+}}
+
+Example 9 (Hack2Skill Hackathons):
+Input: "Update me with top 5 recent hack2skill hackathons every week"
+Output:
+{{
+  "name": "Hack2Skill Weekly Digest",
+  "description": "Weekly digest of top 5 open hackathons from Hack2Skill",
+  "trigger": {{"type": "interval", "every": "1w"}},
+  "steps": [
+    {{"type": "scrape_hack2skill", "url": "https://hack2skill.com/", "limit": 5}},
+    {{"type": "format_web_digest", "provider": "hack2skill"}},
+    {{"type": "send_email", "to": "user@example.com", "subject": "Top 5 Hackathons", "body": "Digest below"}}
+  ]
+}}
+
+Example 10 (Twitter Summary):
+Input: "Summarize top 10 posts from Nikhil Kamath and email me"
+Output:
+{{
+  "name": "Nikhil Kamath Feed Summary",
+  "description": "Daily digest of top 10 recent tweets from Nikhil Kamath",
+  "trigger": {{"type": "interval", "every": "1d"}},
+  "steps": [
+    {{"type": "scrape_twitter", "username": "nikhilkamathzio", "limit": 10}},
+    {{"type": "format_web_digest", "provider": "twitter"}},
+    {{"type": "send_email", "to": "user@example.com", "subject": "Nikhil Kamath Updates", "body": "Tweet Digest"}}
+  ]
+}}
+
+Example 10 (Twitter User Tweets):
+Input: "Email me the latest 5 tweets from @nikhilkamathzio every day"
+Output:
+{{
+  "name": "Nikhil Kamath Twitter Digest",
+  "description": "Daily digest of latest 5 tweets from @nikhilkamathzio",
+  "trigger": {{"type": "interval", "every": "1d"}},
+  "steps": [
+    {{"type": "scrape_twitter", "username": "nikhilkamathzio", "limit": 5}},
+    {{"type": "format_web_digest", "provider": "twitter"}},
+    {{"type": "send_email", "to": "user@example.com", "subject": "Latest Tweets from Nikhil Kamath", "body": "Digest below"}}
   ]
 }}
 """
@@ -279,3 +365,34 @@ Output: {{"intent": "crypto_monitor", "entities": {{"symbol": "BTC", "interval":
 
 
 
+# System prompt for Twitter research fallback
+TWITTER_RESEARCH_PROMPT = """You are a social media researcher.
+Your task is to provide a summary of the latest 5 tweets/posts from the specified Twitter handle.
+
+Input: @{username}
+
+Output Format (STRICT Markdown):
+🐦 **Recent Insights from @{username}**
+_(Source: AI Research - Live scraping currently restricted)_
+
+📝 **Recent Update**
+[Detailed summary of a recent tweet, statement, or activity by the user. Be specific about the topic, e.g., a recent interview, investment, or opinion.]
+🔗 [View on Twitter](https://twitter.com/{username})
+
+---
+
+📝 **Recent Update**
+[Summary of another recent activity...]
+🔗 [View on Twitter](https://twitter.com/{username})
+
+... (Total 5 updates)
+
+---
+_Note: This summary was generated using AI research to provide relevant context while direct live scraping is unavailable._
+
+RULES:
+- Be factual and specific based on your training data.
+- Do NOT hallucinate specific dates if unsure; use "Recently" or "Recent Update".
+- Focus on the most impactful recent activity (podcasts, business moves, public statements).
+- Output ONLY the markdown content.
+"""

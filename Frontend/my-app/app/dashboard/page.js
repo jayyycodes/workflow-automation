@@ -2,379 +2,376 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, Filter, Zap, Loader } from 'lucide-react';
-import { AutomationCard } from '@/components/features/automation-card';
-import { SkeletonCard } from '@/components/ui/skeleton';
-import { ExecutionModal } from '@/components/features/execution-modal';
-import { DashboardAnalytics } from '@/components/features/dashboard-analytics';
-import { EmptyAutomations, EmptySearchResults } from '@/components/ui/empty-states';
+import { Plus, Clock, LayoutGrid, Zap, Shield, Play, Pause, Trash2, Edit, List, Calendar, CheckCircle } from 'lucide-react';
+import { EmptyAutomations } from '@/components/ui/empty-states';
 import { useAuth } from '@/providers/auth-provider';
 import { useToast } from '@/providers/toast-provider';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+
+// Stats Card Component - matching the screenshot exactly
+const StatCard = ({ icon: Icon, label, value, subtext, iconBgColor = "bg-green-500/10", iconColor = "text-green-500" }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-[#111] border border-white/5 p-6 rounded-2xl relative overflow-hidden group hover:border-white/10 transition-colors"
+    >
+        {/* Large background icon on the right */}
+        <div className="absolute top-1/2 right-4 -translate-y-1/2 opacity-10">
+            <div className={`w-20 h-20 rounded-full border-4 ${iconColor.replace('text-', 'border-')} flex items-center justify-center`}>
+                <Icon className={`w-10 h-10 ${iconColor}`} />
+            </div>
+        </div>
+
+        <div className="relative z-10">
+            <div className={`inline-flex p-1.5 rounded-lg ${iconBgColor} mb-4`}>
+                <Icon className={`w-4 h-4 ${iconColor}`} />
+            </div>
+
+            <h3 className="text-4xl font-bold text-white mb-1">{value}</h3>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</p>
+            <p className="text-xs text-gray-600">{subtext}</p>
+        </div>
+    </motion.div>
+);
 
 export default function DashboardPage() {
     const [automations, setAutomations] = useState([]);
     const [executions, setExecutions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [updating, setUpdating] = useState(false); // For toggle operations
-    const [searchQuery, setSearchQuery] = useState('');
-    const [executionResult, setExecutionResult] = useState(null);
+    const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+    const [selectedIds, setSelectedIds] = useState([]);
     const { user, isAuthenticated, loading: authLoading } = useAuth();
     const { success, error: showError } = useToast();
     const router = useRouter();
 
     useEffect(() => {
-        // Don't redirect while auth is still loading
         if (authLoading) return;
-
         if (!isAuthenticated) {
-            console.log('🚫 Redirecting to login...');
             router.push('/login');
             return;
         }
         loadAutomations();
     }, [isAuthenticated, authLoading, router]);
 
-    const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'active', 'paused', 'draft'
-    const [sortBy, setSortBy] = useState('created'); // 'created', 'name', 'lastRun'
-
-    const loadAutomations = async (skipExecutions = false) => {
+    const loadAutomations = async () => {
         try {
-            if (!skipExecutions) setLoading(true);
+            setLoading(true);
             const data = await api.getAutomations();
 
-            if (skipExecutions) {
-                // Fast update - just refresh automation data, keep execution metrics
-                setAutomations(data.automations || []);
-                return;
-            }
+            const automationData = data.automations || [];
+            let totalExecutions = 0;
+            let dailyExecutions = 0;
+            const today = new Date().toDateString();
 
-            // PARALLEL execution fetching for 3-5x faster loading
-            const automationsWithMetrics = await Promise.all(
-                (data.automations || []).map(async (automation) => {
-                    try {
-                        const execs = await api.getAutomationExecutions(automation.id);
-                        const executionCount = execs?.length || 0;
-                        const successCount = execs?.filter(e => e.status === 'success').length || 0;
-                        const successRate = executionCount > 0
-                            ? Math.round((successCount / executionCount) * 100)
-                            : 0;
+            const enrichedAutomations = await Promise.all(automationData.map(async (auto) => {
+                try {
+                    const execs = await api.getAutomationExecutions(auto.id);
+                    totalExecutions += execs.length;
 
-                        return {
-                            ...automation,
-                            execution_count: executionCount,
-                            success_rate: successRate,
-                            executions: execs || []
-                        };
-                    } catch (err) {
-                        return {
-                            ...automation,
-                            execution_count: 0,
-                            success_rate: 0,
-                            executions: []
-                        };
-                    }
-                })
-            );
+                    // Count daily executions
+                    const todayExecs = execs.filter(e => new Date(e.created_at).toDateString() === today).length;
+                    dailyExecutions += todayExecs;
 
-            setAutomations(automationsWithMetrics);
-            const allExecutions = automationsWithMetrics.flatMap(a => a.executions || []);
-            setExecutions(allExecutions);
+                    return { ...auto, lastRun: execs[0]?.created_at, executionCount: execs.length };
+                } catch (e) {
+                    return { ...auto, executionCount: 0 };
+                }
+            }));
+
+            setAutomations(enrichedAutomations);
+            setExecutions({ total: totalExecutions, daily: dailyExecutions });
         } catch (error) {
             console.error('Failed to load automations:', error);
-            showError('Failed to load automations');
         } finally {
-            if (!skipExecutions) setLoading(false);
+            setLoading(false);
         }
     };
 
-    const handleToggle = async (id, newStatus) => {
-        // Optimistic update - update UI immediately
-        setAutomations(prevAutomations =>
-            prevAutomations.map(auto =>
-                auto.id === id ? { ...auto, status: newStatus } : auto
-            )
-        );
-
-        setUpdating(true);
-
+    const handleToggle = async (id, currentStatus) => {
+        const newStatus = currentStatus === 'active' ? 'paused' : 'active';
         try {
+            setAutomations(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
             await api.updateAutomationStatus(id, newStatus);
-            success(`Automation ${newStatus === 'active' ? 'started' : 'stopped'}!`);
-
-            // NO reload - optimistic update is enough!
-            // Backend state is now in sync with UI
+            success(`Automation ${newStatus === 'active' ? 'activated' : 'paused'}`);
         } catch (error) {
-            console.error('Failed to toggle automation:', error);
-            showError('Failed to update automation status.');
-
-            // Revert optimistic update on error
-            setAutomations(prevAutomations =>
-                prevAutomations.map(auto =>
-                    auto.id === id ? { ...auto, status: newStatus === 'active' ? 'paused' : 'active' } : auto
-                )
-            );
-        } finally {
-            setUpdating(false);
+            showError('Failed to update status');
+            loadAutomations();
         }
-    };
-
-    const handleViewResults = async (id, testRun = false) => {
-        try {
-            // Test run mode - execute and show results
-            if (testRun) {
-                const result = await api.runAutomation(id);
-
-                // API returns: { execution_id, status, steps, duration, error }
-                if (result && result.execution_id) {
-                    // Fetch the full execution details
-                    const executions = await api.getAutomationExecutions(id);
-                    const latestExecution = executions[0];
-
-                    setExecutionResult(latestExecution);
-
-                    // Show toast based on status
-                    if (result.status === 'success') {
-                        success('✅ Automation executed successfully!');
-                    } else if (result.status === 'failed') {
-                        showError('❌ Some steps failed. Check results for details.');
-                    } else {
-                        success('🚀 Automation started!');
-                    }
-
-                    // Refresh to show new execution
-                    loadAutomations(false);
-                } else {
-                    showError('Failed to execute automation');
-                }
-                return;
-            }
-
-            // Otherwise, fetch execution history
-            const executions = await api.getAutomationExecutions(id);
-            if (executions && executions.length > 0) {
-                setExecutionResult(executions[0]);
-            } else {
-                showError('No execution results found. Click "Test Run" to execute manually.');
-            }
-        } catch (error) {
-            console.error('Failed to fetch results:', error);
-
-            if (error.response?.status === 404) {
-                showError('Execution results not found. The automation may not have run yet.');
-            } else {
-                showError('Failed to load execution results');
-            }
-        }
-    };
-
-    const handleEdit = (id) => {
-        router.push(`/dashboard/automations/${id}`);
     };
 
     const handleDelete = async (id) => {
+        if (confirm('Delete this automation?')) {
+            try {
+                await api.deleteAutomation(id);
+                success('Automation deleted');
+                loadAutomations();
+            } catch (error) {
+                showError('Failed to delete automation');
+            }
+        }
+    };
+
+    const handleTestRun = async (id, name) => {
         try {
-            await api.deleteAutomation(id);
-            setAutomations(automations.filter(a => a.id !== id));
-            success('Automation deleted successfully');
+            setAutomations(prev => prev.map(a =>
+                a.id === id ? { ...a, isTestRunning: true } : a
+            ));
+            await api.runAutomation(id);
+            success(`Test run started for "${name}"`);
+            // Refresh after a delay to show execution
+            setTimeout(() => loadAutomations(), 2000);
         } catch (error) {
-            console.error('Failed to delete automation:', error);
-            showError('Failed to delete automation. Please try again.');
+            showError('Failed to start test run');
+            setAutomations(prev => prev.map(a =>
+                a.id === id ? { ...a, isTestRunning: false } : a
+            ));
         }
     };
 
-    const filteredAutomations = automations
-        .filter(automation => {
-            // Filter by search query
-            const matchesSearch = automation.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                automation.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const toggleSelectAll = () => {
+        if (selectedIds.length === automations.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(automations.map(a => a.id));
+        }
+    };
 
-            // Filter by status
-            const matchesStatus = filterStatus === 'all' || automation.status === filterStatus;
+    const toggleSelect = (id) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
 
-            return matchesSearch && matchesStatus;
-        })
-        .sort((a, b) => {
-            switch (sortBy) {
-                case 'name':
-                    return a.name.localeCompare(b.name);
-                case 'lastRun':
-                    return (b.last_run || 0) - (a.last_run || 0);
-                case 'created':
-                default:
-                    return (b.created_at || 0) - (a.created_at || 0);
-            }
-        });
-
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (confirm(`Delete ${selectedIds.length} automations?`)) {
+            try {
+                await Promise.all(selectedIds.map(id => api.deleteAutomation(id)));
+                success(`${selectedIds.length} automations deleted`);
+                setSelectedIds([]);
+                loadAutomations();
+            } catch (error) {
+                showError('Failed to delete some automations');
+                loadAutomations();
             }
         }
     };
+
+    const activeCount = automations.filter(a => a.status === 'active').length;
 
     return (
-        <div className="max-w-7xl mx-auto font-mono">
-            <div className="mb-8">
-                <motion.h1
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-4xl font-bold mb-2 text-green-400"
-                >
-                    {'>'} automations.list()
-                </motion.h1>
-                <motion.p
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="text-green-700 text-sm"
-                >
-                    // Manage and monitor your automated workflows
-                </motion.p>
-            </div>
-
-            {/* Analytics Widget - Show only if there are automations */}
-            {!loading && automations.length > 0 && (
-                <DashboardAnalytics
-                    automations={automations}
-                    executions={executions}
-                />
-            )}
-
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="flex flex-col md:flex-row gap-4 mb-8"
-            >
-                <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-700" />
-                    <input
-                        type="text"
-                        placeholder="$ search --query"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-11 pr-4 py-3 rounded-lg bg-black/60 border border-green-900 text-green-400 placeholder-green-800 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-green-600 transition-all font-mono"
-                    />
+        <div className="font-sans">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 className="text-2xl font-bold text-white mb-1">Dashboard</h1>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">Status:</span>
+                        <span className="text-sm font-bold text-green-500">ONLINE</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    </div>
                 </div>
 
                 <Link href="/dashboard/create">
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-6 py-3 rounded-lg bg-green-900/70 border-2 border-green-700 text-green-300 hover:bg-green-800/70 font-semibold flex items-center gap-2 shadow-lg shadow-green-900/30 hover:shadow-green-700/50 transition-all whitespace-nowrap font-mono"
-                    >
-                        <Plus className="w-5 h-5" />
+                    <Button className="bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/20 font-semibold">
+                        <Plus className="w-4 h-4 mr-2" />
                         Create Automation
-                    </motion.button>
+                    </Button>
                 </Link>
-            </motion.div>
+            </div>
 
-            {/* Filters and Sort */}
-            {!loading && automations.length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="flex flex-wrap items-center gap-3 mb-6"
-                >
-                    {/* Status Filters */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-green-700 font-mono">Filter:</span>
-                        {['all', 'active', 'paused', 'draft'].map((status) => (
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                <StatCard
+                    icon={Clock}
+                    label="TOTAL EXECUTIONS"
+                    value={executions.total || 0}
+                    subtext="Processing Time: 840ms avg"
+                    iconBgColor="bg-green-500/10"
+                    iconColor="text-green-500"
+                />
+                <StatCard
+                    icon={LayoutGrid}
+                    label="ACTIVE WORKFLOWS"
+                    value={activeCount}
+                    subtext={`${automations.length} Total Definitions`}
+                    iconBgColor="bg-cyan-500/10"
+                    iconColor="text-cyan-500"
+                />
+                <StatCard
+                    icon={Zap}
+                    label="DAILY EXECUTIONS"
+                    value={executions.daily || 0}
+                    subtext="Runs in last 24h"
+                    iconBgColor="bg-yellow-500/10"
+                    iconColor="text-yellow-500"
+                />
+                <StatCard
+                    icon={Shield}
+                    label="TOTAL AUTOMATIONS"
+                    value={automations.length}
+                    subtext="All created workflows"
+                    iconBgColor="bg-emerald-500/10"
+                    iconColor="text-emerald-500"
+                />
+            </div>
+
+            <div className="mb-6 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-lg font-bold text-white">Active Workflows</h2>
+
+                    {/* Bulk Selection Actions */}
+                    <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                            <div className="relative flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={automations.length > 0 && selectedIds.length === automations.length}
+                                    onChange={toggleSelectAll}
+                                    className="peer h-4 w-4 opacity-0 absolute cursor-pointer"
+                                />
+                                <div className="h-4 w-4 border border-white/20 rounded bg-white/5 peer-checked:bg-green-500 peer-checked:border-green-500 transition-all flex items-center justify-center">
+                                    <CheckCircle className={`w-3 h-3 text-black font-bold ${selectedIds.length === automations.length ? 'block' : 'hidden'}`} />
+                                </div>
+                            </div>
+                            <span className="text-xs font-medium text-gray-400 group-hover:text-white transition-colors uppercase tracking-wider">Select All</span>
+                        </label>
+
+                        {selectedIds.length > 0 && (
                             <motion.button
-                                key={status}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setFilterStatus(status)}
-                                className={`px-3 py-1.5 rounded font-mono text-xs transition-all ${filterStatus === status
-                                    ? 'bg-green-900/70 border-2 border-green-700 text-green-300'
-                                    : 'glass border border-green-900 text-green-700 hover:text-green-500'
-                                    }`}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                onClick={handleBulkDelete}
+                                className="flex items-center gap-1.5 px-3 py-1 rounded bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 text-xs font-bold uppercase transition-all"
                             >
-                                {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete ({selectedIds.length})
                             </motion.button>
-                        ))}
+                        )}
                     </div>
-
-                    {/* Sort */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-green-700 font-mono">Sort:</span>
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="px-3 py-1.5 rounded glass border border-green-900 text-green-400 text-xs font-mono bg-black/60 focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-green-600 transition-all"
-                        >
-                            <option value="created">Created Date</option>
-                            <option value="name">Name</option>
-                            <option value="lastRun">Last Run</option>
-                        </select>
-                    </div>
-
-                    {/* Results count */}
-                    <div className="ml-auto text-xs text-green-700 font-mono">
-                        {filteredAutomations.length} / {automations.length} automations
-                    </div>
-                </motion.div>
-            )}
-
-            {loading && (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <SkeletonCard count={6} />
                 </div>
-            )}
+                <div className="flex gap-1 bg-[#111] p-1 rounded-lg border border-white/5">
+                    <button
+                        onClick={() => setViewMode('grid')}
+                        className={`p-2 rounded transition ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <LayoutGrid className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => setViewMode('list')}
+                        className={`p-2 rounded transition ${viewMode === 'list' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <List className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
 
-            {!loading && filteredAutomations.length === 0 && !searchQuery && (
+            {loading ? (
+                <div className="text-center py-20">
+                    <div className="w-8 h-8 mx-auto border-2 border-green-500 border-t-transparent rounded-full animate-spin mb-4" />
+                    <p className="text-gray-500">Loading your workspace...</p>
+                </div>
+            ) : automations.length === 0 ? (
                 <EmptyAutomations />
-            )}
-
-            {!loading && filteredAutomations.length === 0 && searchQuery && (
-                <EmptySearchResults
-                    query={searchQuery}
-                    onClear={() => setSearchQuery('')}
-                />
-            )}
-
-            {!loading && filteredAutomations.length > 0 && (
-                <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-                >
-                    {filteredAutomations.map((automation) => (
-                        <AutomationCard
+            ) : (
+                <div className="space-y-4">
+                    {automations.map((automation) => (
+                        <div
                             key={automation.id}
-                            automation={automation}
-                            onToggle={handleToggle}
-                            onViewResults={handleViewResults}
-                            onEdit={(id) => router.push(`/dashboard/edit/${id}`)}
-                            onDelete={async (id) => {
-                                try {
-                                    await api.deleteAutomation(id);
-                                    success('Automation deleted successfully!');
-                                    loadAutomations(true);
-                                } catch (error) {
-                                    showError('Failed to delete automation');
-                                }
-                            }}
-                            onUpdate={() => loadAutomations(true)}
-                        />
-                    ))}
-                </motion.div>
-            )}
+                            className="bg-[#111] border border-white/5 rounded-xl p-6 group hover:border-green-500/30 transition-all"
+                        >
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                <div className="flex items-start gap-4 flex-1">
+                                    {/* Selection Checkbox */}
+                                    <div className="pt-1">
+                                        <label className="relative flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.includes(automation.id)}
+                                                onChange={() => toggleSelect(automation.id)}
+                                                className="peer h-4 w-4 opacity-0 absolute cursor-pointer"
+                                            />
+                                            <div className="h-4 w-4 border border-white/20 rounded bg-white/5 peer-checked:bg-green-500 peer-checked:border-green-500 transition-all flex items-center justify-center">
+                                                <CheckCircle className={`w-3 h-3 text-black font-bold ${selectedIds.includes(automation.id) ? 'block' : 'hidden'}`} />
+                                            </div>
+                                        </label>
+                                    </div>
 
-            {executionResult && (
-                <ExecutionModal
-                    execution={executionResult}
-                    onClose={() => setExecutionResult(null)}
-                />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <h3 className="text-lg font-semibold text-white">{automation.name}</h3>
+                                            {automation.status === 'paused' && (
+                                                <span className="px-2 py-1 rounded text-[10px] bg-orange-500/10 text-orange-500 font-bold border border-orange-500/20 uppercase flex items-center gap-1">
+                                                    <Pause className="w-3 h-3" /> Paused
+                                                </span>
+                                            )}
+                                            {automation.status === 'active' && (
+                                                <span className="px-2 py-1 rounded text-[10px] bg-green-500/10 text-green-500 font-bold border border-green-500/20 uppercase flex items-center gap-1">
+                                                    <Play className="w-3 h-3 fill-green-500" /> Active
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-gray-400 text-sm mb-4 line-clamp-2 max-w-2xl">
+                                            {automation.description || 'No description provided.'}
+                                        </p>
+
+                                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                                            <span className="flex items-center gap-1.5">
+                                                <Clock className="w-3.5 h-3.5" />
+                                                {automation.lastRun ? `Last run: ${new Date(automation.lastRun).toLocaleDateString()}` : 'No runs yet'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        {/* Activate/Pause Button */}
+                                        <Button
+                                            onClick={() => handleToggle(automation.id, automation.status)}
+                                            className={`h-9 px-4 text-xs font-semibold ${automation.status === 'active'
+                                                ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 border border-yellow-500/20'
+                                                : 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/20'
+                                                }`}
+                                        >
+                                            {automation.status === 'active' ? (
+                                                <><Pause className="w-3.5 h-3.5 mr-1.5" /> Pause</>
+                                            ) : (
+                                                <><Play className="w-3.5 h-3.5 mr-1.5 fill-white" /> Activate</>
+                                            )}
+                                        </Button>
+
+                                        {/* Action Icons */}
+                                        <div className="flex items-center gap-0.5 bg-black/40 p-1 rounded-lg border border-white/5">
+                                            <button
+                                                onClick={() => handleTestRun(automation.id, automation.name)}
+                                                disabled={automation.isTestRunning}
+                                                className="p-2 text-gray-500 hover:text-green-500 hover:bg-green-500/10 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Test Run (Run Once)"
+                                            >
+                                                {automation.isTestRunning ? (
+                                                    <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <Play className="w-4 h-4" />
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(automation.id)}
+                                                className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition"
+                                                title="Delete"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             )}
         </div>
     );
 }
+

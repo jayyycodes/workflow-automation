@@ -146,8 +146,40 @@ const aiBridgeService = {
                 text: "I'm having trouble connecting. Please try again."
             };
         }
+    },
+
+    /**
+     * Research Twitter activity via AI
+     * 
+     * @param {string} username - Twitter handle to research
+     * @returns {Promise<Object>} AI-generated summary of recent activity
+     */
+    researchTwitter: async (username) => {
+        logger.info('Calling Python /research-twitter', { username });
+
+        try {
+            const response = await fetch(`${AI_SERVICE_URL}/research-twitter`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: username })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Python service error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            logger.error('researchTwitter failed', { error: error.message });
+            return {
+                success: false,
+                error: `AI service unavailable: ${error.message}`
+            };
+        }
     }
 };
+
 
 export default aiBridgeService;
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Sparkles, Loader, Send, Zap, ArrowRight,
-    CheckCircle, AlertCircle, Code, Eye, Save
+    CheckCircle, AlertCircle, Code, Eye, Save, Wand2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/auth-provider';
@@ -109,9 +109,6 @@ export default function CreateAutomationPage() {
                         description: 'Please edit the automation to add proper workflow steps'
                     }
                 ],
-
-            // Optional: status (defaults to 'draft' on backend if not provided)
-            // REMOVED - let backend handle status defaulting
         };
 
         setLoading(true);
@@ -138,21 +135,21 @@ export default function CreateAutomationPage() {
 
     const examplePrompts = [
         "Send me an email every morning with stock prices for AAPL and GOOGL",
-        "Email me [Your_github_username] GitHub stars summary every Monday",
+        "Email me my GitHub stars summary every Monday",
         "Track Apple stock and sms if it drops below $150.",
         "Notify me with weather updates of Mumbai everyday at 9AM"
     ];
 
     return (
-        <div className="max-w-4xl mx-auto font-mono">
+        <div className="max-w-5xl mx-auto font-sans">
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-8"
             >
-                <h1 className="text-4xl font-bold mb-2 text-green-400">{'>'} automation.create()</h1>
-                <p className="text-green-700 text-sm">// Describe your workflow in natural language</p>
+                <h1 className="text-3xl font-bold mb-2 text-white">Create Automation</h1>
+                <p className="text-gray-400 text-sm">Describe your workflow in natural language, and AI will build it for you.</p>
             </motion.div>
 
             <div className="grid lg:grid-cols-2 gap-8">
@@ -162,10 +159,10 @@ export default function CreateAutomationPage() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.1 }}
                 >
-                    <div className="glass-strong rounded-2xl p-8 border border-white/10">
+                    <div className="bg-[#0A0A0A] rounded-2xl p-8 border border-white/5 shadow-2xl shadow-black/50">
                         <div className="flex items-center gap-2 mb-6">
-                            <Sparkles className="w-6 h-6 text-emerald-400" />
-                            <h2 className="text-2xl font-bold">Describe Your Automation</h2>
+                            <Sparkles className="w-5 h-5 text-green-500" />
+                            <h2 className="text-xl font-bold text-white">Describe Workflow</h2>
                         </div>
 
                         {/* AI Input */}
@@ -177,7 +174,7 @@ export default function CreateAutomationPage() {
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 placeholder="Example: Send me an email every day at 9 AM with the weather forecast..."
-                                className="w-full h-40 px-4 py-3 rounded-lg glass border border-white/10 bg-white/5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-emerald-500/50 transition-all resize-none"
+                                className="w-full h-40 px-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 transition-all resize-none text-sm"
                                 disabled={loading || step !== 'input'}
                             />
                             {error && (
@@ -186,7 +183,7 @@ export default function CreateAutomationPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2"
                                 >
-                                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                                    <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
                                     <p className="text-sm text-red-400">{error}</p>
                                 </motion.div>
                             )}
@@ -200,19 +197,19 @@ export default function CreateAutomationPage() {
                                 transition={{ delay: 0.2 }}
                                 className="mb-6"
                             >
-                                <p className="text-sm text-gray-400 mb-3">Try one of these examples:</p>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Try an example</p>
                                 <div className="space-y-2">
                                     {examplePrompts.map((prompt, i) => (
                                         <motion.button
                                             key={i}
-                                            whileHover={{ scale: 1.02, x: 5 }}
-                                            whileTap={{ scale: 0.98 }}
+                                            whileHover={{ scale: 1.01, x: 2 }}
+                                            whileTap={{ scale: 0.99 }}
                                             onClick={() => setDescription(prompt)}
-                                            className="w-full text-left px-4 py-3 rounded-lg glass border border-white/10 hover:border-emerald-500/30 text-sm text-gray-300 hover:text-white transition-all"
+                                            className="w-full text-left p-3 rounded-lg bg-white/5 border border-white/5 hover:border-green-500/30 text-sm text-gray-400 hover:text-white transition-all group"
                                         >
                                             <div className="flex items-start gap-2">
-                                                <Zap className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                                                <span>{prompt}</span>
+                                                <Zap className="w-3.5 h-3.5 text-gray-600 group-hover:text-green-500 transition-colors flex-shrink-0 mt-0.5" />
+                                                <span className="line-clamp-1">{prompt}</span>
                                             </div>
                                         </motion.button>
                                     ))}
@@ -226,7 +223,7 @@ export default function CreateAutomationPage() {
                                 <Button
                                     onClick={handleGenerate}
                                     disabled={loading || !description.trim()}
-                                    className="flex-1"
+                                    className="w-full bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/20 h-11"
                                 >
                                     {loading ? (
                                         <>
@@ -235,8 +232,8 @@ export default function CreateAutomationPage() {
                                         </>
                                     ) : (
                                         <>
-                                            <Sparkles className="w-5 h-5 mr-2" />
-                                            Generate Automation
+                                            <Wand2 className="w-5 h-5 mr-2" />
+                                            Generate with AI
                                         </>
                                     )}
                                 </Button>
@@ -244,10 +241,10 @@ export default function CreateAutomationPage() {
 
                             {step === 'preview' && (
                                 <>
-                                    <Button onClick={handleReset} variant="secondary" className="flex-1">
-                                        Start Over
+                                    <Button onClick={handleReset} variant="outline" className="flex-1 bg-transparent border-white/10 text-white hover:bg-white/5">
+                                        Cancel
                                     </Button>
-                                    <Button onClick={handleSave} disabled={loading} className="flex-1">
+                                    <Button onClick={handleSave} disabled={loading} className="flex-1 bg-green-600 hover:bg-green-500 text-white">
                                         {loading ? (
                                             <>
                                                 <Loader className="w-5 h-5 mr-2 animate-spin" />
@@ -256,7 +253,7 @@ export default function CreateAutomationPage() {
                                         ) : (
                                             <>
                                                 <Save className="w-5 h-5 mr-2" />
-                                                Save Automation
+                                                Create Automation
                                             </>
                                         )}
                                     </Button>
@@ -273,7 +270,7 @@ export default function CreateAutomationPage() {
                             >
                                 <ProgressBar
                                     progress={progress}
-                                    steps={['Analyzing', 'Generating', 'Optimizing']}
+                                    steps={['Analyzing Request', 'Designing Workflow', 'Finalizing Config']}
                                     currentStep={Math.floor(progress / 33)}
                                 />
                             </motion.div>
@@ -285,21 +282,20 @@ export default function CreateAutomationPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.3 }}
-                        className="mt-6 glass rounded-xl p-6 border border-white/10"
+                        className="mt-6 p-6 rounded-xl border border-white/5 bg-white/5"
                     >
-                        <h3 className="text-sm font-semibold text-emerald-400 mb-3">💡 Tips for better results</h3>
+                        <h3 className="text-sm font-semibold text-green-500 mb-3 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4" />
+                            Pro Tips
+                        </h3>
                         <ul className="space-y-2 text-sm text-gray-400">
                             <li className="flex items-start gap-2">
-                                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5" />
                                 <span>Be specific about timing (e.g., "every day at 9 AM")</span>
                             </li>
                             <li className="flex items-start gap-2">
-                                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                                <span>Mention the data source and destination</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                                <span>Include conditions or filters if needed</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5" />
+                                <span>Mention inputs and outputs clearly</span>
                             </li>
                         </ul>
                     </motion.div>
@@ -319,66 +315,56 @@ export default function CreateAutomationPage() {
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className="glass-strong rounded-2xl p-8 border border-white/10"
+                                className="bg-[#0A0A0A] rounded-2xl p-8 border border-white/5 shadow-2xl relative overflow-hidden"
                             >
-                                <div className="flex items-center gap-2 mb-6">
-                                    <Eye className="w-6 h-6 text-purple-400" />
-                                    <h2 className="text-2xl font-bold">Preview</h2>
+                                <div className="absolute top-0 right-0 p-4 opacity-5">
+                                    <Code className="w-32 h-32" />
+                                </div>
+
+                                <div className="flex items-center gap-2 mb-8 relative z-10">
+                                    <div className="p-2 rounded-lg bg-green-500/10 text-green-500">
+                                        <Eye className="w-5 h-5" />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-white">Blueprint Preview</h2>
                                 </div>
 
                                 {/* Automation Details */}
-                                <div className="space-y-4 mb-6">
-                                    <div>
-                                        <label className="text-sm font-semibold text-gray-400 mb-1 block">Name</label>
+                                <div className="space-y-6 mb-8 relative z-10">
+                                    <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Name</label>
                                         <p className="text-lg font-semibold text-white">{generatedAutomation.name || 'Untitled Automation'}</p>
                                     </div>
 
                                     <div>
-                                        <label className="text-sm font-semibold text-gray-400 mb-1 block">Description</label>
-                                        <p className="text-gray-300">{generatedAutomation.description || description}</p>
-                                    </div>
-
-                                    {generatedAutomation.schedule && (
-                                        <div>
-                                            <label className="text-sm font-semibold text-gray-400 mb-1 block">Schedule</label>
-                                            <p className="text-gray-300">{generatedAutomation.schedule}</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Workflow Steps */}
-                                <div>
-                                    <label className="text-sm font-semibold text-gray-400 mb-3 block">Workflow Steps</label>
-                                    <div className="space-y-3">
-                                        {generatedAutomation.steps?.map((step, index) => (
-                                            <motion.div
-                                                key={index}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: index * 0.1 }}
-                                                className="glass rounded-lg p-4 border border-white/10"
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-emerald-400 font-semibold flex-shrink-0">
-                                                        {index + 1}
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Workflow Steps</label>
+                                        <div className="space-y-0">
+                                            {generatedAutomation.steps?.map((step, index) => (
+                                                <div key={index} className="flex gap-4">
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center text-xs font-bold text-white z-10 box-content border-4 border-[#0A0A0A]">
+                                                            {index + 1}
+                                                        </div>
+                                                        {index < (generatedAutomation.steps?.length || 0) - 1 && (
+                                                            <div className="w-0.5 flex-1 bg-white/10 min-h-[20px]" />
+                                                        )}
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <h4 className="font-semibold text-white mb-1">{step.type}</h4>
-                                                        <p className="text-sm text-gray-400">{step.description || 'No description'}</p>
+                                                    <div className="pb-6 pt-0.5">
+                                                        <h4 className="font-semibold text-white text-sm">{step.type}</h4>
+                                                        <p className="text-xs text-gray-400 mt-1">{step.description || 'Action step'}</p>
                                                     </div>
                                                 </div>
-                                            </motion.div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* JSON View (Collapsible) */}
-                                <details className="mt-6">
-                                    <summary className="cursor-pointer text-sm font-semibold text-gray-400 hover:text-white transition flex items-center gap-2">
-                                        <Code className="w-4 h-4" />
-                                        View JSON
+                                <details className="relative z-10 group">
+                                    <summary className="cursor-pointer text-xs font-semibold text-gray-500 hover:text-white transition flex items-center gap-2 select-none">
+                                        <Code className="w-3 h-3" />
+                                        Show Configuration JSON
                                     </summary>
-                                    <pre className="mt-3 p-4 rounded-lg bg-black/30 border border-white/10 text-xs text-gray-300 overflow-auto max-h-64">
+                                    <pre className="mt-3 p-4 rounded-lg bg-black border border-white/10 text-[10px] text-green-400 font-mono overflow-auto max-h-48">
                                         {JSON.stringify(generatedAutomation, null, 2)}
                                     </pre>
                                 </details>
@@ -389,21 +375,17 @@ export default function CreateAutomationPage() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="glass-strong rounded-2xl p-12 border border-white/10 text-center"
+                                className="bg-[#0A0A0A] rounded-2xl p-12 border border-white/5 text-center flex flex-col items-center justify-center h-full min-h-[400px]"
                             >
-                                <motion.div
-                                    animate={{
-                                        scale: [1, 1.05, 1],
-                                        rotate: [0, 5, -5, 0]
-                                    }}
-                                    transition={{ duration: 4, repeat: Infinity }}
-                                    className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center"
-                                >
-                                    <Sparkles className="w-10 h-10 text-white" />
-                                </motion.div>
-                                <h3 className="text-xl font-semibold mb-2">AI is Ready</h3>
-                                <p className="text-gray-400">
-                                    Describe your automation and click "Generate" to see the magic happen
+                                <div className="w-24 h-24 mb-6 relative">
+                                    <div className="absolute inset-0 bg-green-500 blur-2xl opacity-20 animate-pulse" />
+                                    <div className="relative w-full h-full rounded-2xl bg-gradient-to-br from-white/5 to-transparent border border-white/10 flex items-center justify-center">
+                                        <Sparkles className="w-10 h-10 text-green-500" />
+                                    </div>
+                                </div>
+                                <h3 className="text-xl font-bold text-white mb-2">Ready to Build</h3>
+                                <p className="text-sm text-gray-400 max-w-xs mx-auto">
+                                    Describe your automation on the left, and watch the AI construct it here in real-time.
                                 </p>
                             </motion.div>
                         )}
