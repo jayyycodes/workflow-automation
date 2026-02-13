@@ -1,12 +1,65 @@
 """
-LLM Prompts for Automation Generation
+LLM Prompts for Automation Generation (v2)
 
-These prompts enforce strict output format and prevent hallucination.
+Key changes from v1:
+- Dynamic tool injection from registry API
+- Retry correction prompt for self-healing
+- Stricter JSON enforcement
+- All original prompts preserved for backward compatibility
 """
 
+import json
+import logging
+import httpx
 from config import ALLOWED_STEPS, ALLOWED_TRIGGERS
 
-# System prompt for intent parsing
+logger = logging.getLogger(__name__)
+
+# ─── Registry Integration ────────────────────────────────────────────────
+
+# Cache for registry data (fetched once at startup, refreshed on demand)
+_registry_cache = {
+    "tools": None,
+    "prompt_text": None,
+    "tool_names": None,
+    "version": None
+}
+
+def fetch_registry(base_url: str = "http://localhost:3000") -> dict:
+    """Fetch tool definitions from the Node.js registry endpoint."""
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get(f"{base_url}/registry/prompt")
+            response.raise_for_status()
+            data = response.json()
+            
+            _registry_cache["prompt_text"] = data.get("promptText", "")
+            _registry_cache["tool_names"] = data.get("toolNames", [])
+            _registry_cache["version"] = data.get("registryVersion", "unknown")
+            
+            logger.info(f"✅ Registry loaded: {len(_registry_cache['tool_names'])} tools (v{_registry_cache['version']})")
+            return data
+    except Exception as e:
+        logger.warning(f"⚠️ Could not fetch registry from {base_url}: {e}. Using hardcoded ALLOWED_STEPS.")
+        return None
+
+def get_tool_prompt_text() -> str:
+    """Get tool descriptions for prompt injection. Uses registry if available, falls back to ALLOWED_STEPS."""
+    if _registry_cache["prompt_text"]:
+        return _registry_cache["prompt_text"]
+    
+    # Fallback to hardcoded list from config.py
+    return "\n".join(f"- {step}" for step in ALLOWED_STEPS)
+
+def get_allowed_tool_names() -> list:
+    """Get list of allowed tool names. Uses registry if available."""
+    if _registry_cache["tool_names"]:
+        return _registry_cache["tool_names"]
+    return ALLOWED_STEPS
+
+# ─── System Prompts ──────────────────────────────────────────────────────
+
+# System prompt for intent parsing (unchanged from v1)
 PARSE_INTENT_PROMPT = f"""You are an intent parser for an automation system.
 
 Extract the user's intent from their natural language request.
@@ -26,28 +79,41 @@ Example input: "Send me AAPL stock price every 5 minutes"
 Example output: {{"intent": "stock_monitor", "entities": {{"symbol": "AAPL", "interval": "5m"}}, "channel": "notification"}}
 """
 
-# System prompt for automation generation
-GENERATE_AUTOMATION_PROMPT = f"""You are an automation planner.
 
-Convert user instructions into a structured automation JSON that matches this exact schema:
+def build_generation_prompt(user_request: str, tool_prompt_text: str = None) -> str:
+    """
+    Build the automation generation prompt with dynamic tool injection.
+    This replaces the old static GENERATE_AUTOMATION_PROMPT.
+    """
+    if tool_prompt_text is None:
+        tool_prompt_text = get_tool_prompt_text()
+    
+    return f"""You are an automation planner. Convert user instructions into a structured automation JSON.
 
+CRITICAL RULES:
+1. Output ONLY a valid JSON object — NO markdown, NO code blocks, NO explanations
+2. Use ONLY the step types listed below — NEVER invent new ones
+3. If unsure about a parameter value, use null instead of inventing values
+4. Every automation MUST have at least one notification step
+
+OUTPUT SCHEMA:
 {{
   "name": "string",
-  "description": "string", 
+  "description": "string",
   "trigger": {{
     "type": "manual|interval",
     "every": "interval string (only if type is interval)"
   }},
   "steps": [
     {{
-      "type": "step_type",
+      "type": "step_type_from_list_below",
       ...step-specific fields
     }}
   ]
 }}
 
-ALLOWED STEP TYPES (use ONLY these):
-{ALLOWED_STEPS}
+AVAILABLE TOOLS (from registry):
+{tool_prompt_text}
 
 ALLOWED TRIGGER TYPES:
 {ALLOWED_TRIGGERS}
@@ -55,12 +121,11 @@ ALLOWED TRIGGER TYPES:
 VALID INTERVAL FORMAT:
 - Format: <number><unit> where unit = s (seconds), m (minutes), h (hours), d (days), w (weeks)
 - Examples: 30s, 1m, 2m, 5m, 1h, 2d, 1w
-- Use ANY reasonable interval the user specifies
 
 STEP CONFIGURATIONS:
 - fetch_stock_price: {{"type": "fetch_stock_price", "symbol": "AAPL"}}
 - fetch_crypto_price: {{"type": "fetch_crypto_price", "symbol": "BTC"}}
-- fetch_weather: {{"type": "fetch_weather", "location": "user's city name"}} **IMPORTANT: Always ask user for their city, never use "current"**
+- fetch_weather: {{"type": "fetch_weather", "location": "user's city name"}} **Always ask user for their city, never use "current"**
 - scrape_github: {{"type": "scrape_github", "username": "github_user", "repo_type": "stars|repos|activity"}}
 - scrape_hackernews: {{"type": "scrape_hackernews", "story_type": "top|best|new", "count": 10}}
 - scrape_reddit: {{"type": "scrape_reddit", "subreddit": "programming", "sort": "hot", "limit": 10, "keyword": "AI"}}
@@ -69,38 +134,37 @@ STEP CONFIGURATIONS:
 - send_email: {{"type": "send_email", "to": "user@example.com", "subject": "...", "body": "..."}}
 - send_whatsapp: {{"type": "send_whatsapp", "to": "+1234567890", "message": "..."}}
 - send_sms: {{"type": "send_sms", "to": "+1234567890", "message": "..."}}
-- job_search: {{"type": "job_search", "query": "...", "location": "..."}}
-- condition: {{"type": "condition", "if": "stockPrice < 150"}} **Field is 'if' not 'condition'! Format: "stockPrice < 150"**
+- scrape_screener: {{"type": "scrape_screener", "symbol": "HCLTECH"}}
+- scrape_groww: {{"type": "scrape_groww", "url": "https://groww.in/gold-rates"}}
+- scrape_hack2skill: {{"type": "scrape_hack2skill", "url": "https://hack2skill.com/", "limit": 5}}
+- scrape_twitter: {{"type": "scrape_twitter", "username": "handle", "limit": 5}}
+- send_discord: {{"type": "send_discord", "webhook_url": "...", "message": "..."}}
+- send_slack: {{"type": "send_slack", "webhook_url": "...", "message": "..."}}
 
-CRITICAL: NOTIFICATION FIELDS ARE REQUIRED!
-- send_email: MUST include "to", "subject", "body"
-- send_sms: MUST include "to" and "message"  **ALWAYS use "+1234567890" as placeholder - backend auto-replaces with user's phone**
-- send_whatsapp: MUST include "to" and "message"  **ALWAYS use "+1234567890" as placeholder**
+NOTIFICATION PLACEHOLDER VALUES:
+- Email: "user@example.com" (backend auto-replaces with user's email)
+- WhatsApp/SMS: "+1234567890" (backend auto-replaces with user's phone)
 
 NOTIFICATION CHANNEL KEYWORDS:
-- Email: "email", "mail", "send email"
-- WhatsApp: "whatsapp", "wa", "send on whatsapp", "whatsapp me", "message on whatsapp"
-- SMS: "sms", "text", "text me", "send sms", "message me", "send text"
-- Default: If no channel specified, use "send_email"
+- Email: "email", "mail" → use send_email
+- WhatsApp: "whatsapp", "wa" → use send_whatsapp
+- SMS: "sms", "text", "text me" → use send_sms
+- Discord: "discord" → use send_discord
+- Slack: "slack" → use send_slack
+- Default (no channel specified): use send_email
 
-REDDIT SCRAPING TIPS:
-- Add "keyword" parameter to filter posts by title/text
-- Example: "Monitor r/programming for AI posts" → keyword: "AI"
-- Without keyword, returns all posts from subreddit
+WEB SCRAPING WORKFLOW PATTERN (ALWAYS 3 steps):
+1. scrape_[provider] (github/hackernews/reddit/screener/groww/hack2skill/twitter)
+2. format_web_digest (provider: matching provider name) **REQUIRED!**
+3. send notification (email/sms/discord/slack)
+Without format_web_digest, the notification body will be empty!
 
-RULES:
-1. Output ONLY valid JSON - no explanations, no markdown, no code blocks
-2. Use ONLY allowed step types - if a step is not in the list, DO NOT use it
-3. Generate a descriptive "name" from the user's request
-4. If the request is unclear or unsupported, return: {{"error": "Unsupported automation request"}}
-5. **CRITICAL: Every automation MUST include a notification step (send_email, send_notification, send_whatsapp, or send_sms)**
-6. Detect notification channel from keywords - if user says "whatsapp", use send_whatsapp; if "sms"/"text", use send_sms
-7. Always include at least TWO steps: one to fetch/process data, one to notify
-8. Use "manual" trigger if no timing is specified
-9. For email, use "user@example.com"; for WhatsApp/SMS, use "+1234567890" as placeholder
-10. Include meaningful subject/message in notifications with the fetched data
+CONDITIONAL WORKFLOW PATTERN (ALWAYS 3 steps):
+1. Fetch data step
+2. {{"type": "condition", "if": "stockPrice < 150"}} (field is 'if', NOT 'condition')
+3. Notification step (executor skips this if condition is false)
 
-Example 1 (Email - Default):
+EXAMPLE 1 (Stock Email):
 Input: "Send me AAPL stock price every 5 minutes"
 Output:
 {{
@@ -113,21 +177,7 @@ Output:
   ]
 }}
 
-Example 2 (GitHub Stars - Weekly):
-Input: "Send me a summary of my GitHub stars every Monday"
-Output:
-{{
-  "name": "GitHub Stars Weekly Digest",
-  "description": "Weekly summary of starred GitHub repositories",
-  "trigger": {{"type": "interval", "every": "1w"}},
-  "steps": [
-    {{"type": "scrape_github", "username": "GITHUB_USERNAME", "repo_type": "stars"}},
-    {{"type": "format_web_digest", "provider": "github"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "Your GitHub Stars This Week", "body": "Digest below"}}
-  ]
-}}
-
-Example 3 (HackerNews Daily):
+EXAMPLE 2 (HackerNews Digest):
 Input: "Email me top HackerNews stories every morning"
 Output:
 {{
@@ -141,29 +191,7 @@ Output:
   ]
 }}
 
-CRITICAL FOR WEB SCRAPING WORKFLOWS:
-**ALWAYS include 3 steps for scraping workflows:**
-1. scrape_[provider] (github/hackernews/reddit)
-2. format_web_digest (provider: github|hackernews|reddit) **REQUIRED!**
-3. send notification (email/sms/discord/slack)
-
-**Without format_web_digest, the email will be empty!**
-
-Example 3.5 (Reddit with Keyword):
-Input: "Monitor r/programming for posts about 'AI' and email me"
-Output:
-{{
-  "name": "Reddit AI Posts Monitor",
-  "description": "Monitor r/programming for AI-related posts",
-  "trigger": {{"type": "interval", "every": "1h"}},
-  "steps": [
-    {{"type": "scrape_reddit", "subreddit": "programming", "keyword": "AI", "limit": 10}},
-    {{"type": "format_web_digest", "provider": "reddit"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "AI Posts on r/programming", "body": "Digest below"}}
-  ]
-}}
-
-Example 4 (Conditional Stock Alert - CRITICAL PATTERN!):
+EXAMPLE 3 (Conditional SMS):
 Input: "Track Apple stock and SMS me if it drops below $150"
 Output:
 {{
@@ -177,157 +205,41 @@ Output:
   ]
 }}
 
-CRITICAL RULES FOR CONDITIONAL WORKFLOWS:
-1. ALWAYS include ALL 3 steps: [fetch data, condition check, send notification]
-2. NEVER generate incomplete workflows - even with conditions, the notification step is REQUIRED
-3. The executor will automatically skip the notification if condition is false
-4. Condition uses 'if' field (NOT 'condition'): {{"type": "condition", "if": "stockPrice < 150"}}
+User request: {user_request}
+Output:"""
 
-More conditional examples:
-- "Email me if TSLA goes above $300" → [fetch_stock_price (TSLA), {{"type": "condition", "if": "stockPrice > 300"}}, {{"type": "send_email", "to": "user@example.com", "subject": "TSLA Alert", "body": "..."}}]
-- "WhatsApp when temperature exceeds 35°C" → [fetch_weather, {{"type": "condition", "if": "temperature > 35"}}, {{"type": "send_whatsapp", "to": "+1234567890", "message": "..."}}]
-- "SMS if Bitcoin drops 10%" → [fetch_crypto_price (BTC), {{"type": "condition", "if": "change < -10"}}, {{"type": "send_sms", "to": "+1234567890", "message": "..."}}]
 
-Example 5 (WhatsApp):
-Input: "WhatsApp me SBIN stock price every hour"
-Output:
-{{
-  "name": "SBIN Stock WhatsApp Alert",
-  "description": "Fetch SBIN stock price hourly and send WhatsApp notification",
-  "trigger": {{"type": "interval", "every": "1h"}},
-  "steps": [
-    {{"type": "fetch_stock_price", "symbol": "SBIN"}},
-    {{"type": "send_whatsapp", "to": "+1234567890", "message": "SBIN stock price update"}}
-  ]
-}}
+# Keep old prompt for backward compatibility
+GENERATE_AUTOMATION_PROMPT = build_generation_prompt("{user_request_placeholder}")
 
-Example 3 (SMS):
-Input: "Text me BTC price every day"
-Output:
-{{
-  "name": "Bitcoin Daily SMS Alert",
-  "description": "Fetch BTC price daily and send SMS notification",
-  "trigger": {{"type": "interval", "every": "1d"}},
-  "steps": [
-    {{"type": "fetch_crypto_price", "symbol": "BTC"}},
-    {{"type": "send_sms", "to": "+1234567890", "message": "Daily Bitcoin price update"}}
-  ]
-}}
 
-Example 4 (Weather - NEW):
-Input: "Send me weather updates every 2 minutes via email"
-Output:
-{{
-  "name": "Weather Update Email",
-  "description": "Fetch weather updates every 2 minutes and send via email",
-  "trigger": {{"type": "interval", "every": "2m"}},
-  "steps": [
-    {{"type": "fetch_weather", "location": "current"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "Weather Update", "body": "Current weather conditions"}}
-  ]
-}}
+# ─── Retry Correction Prompt ─────────────────────────────────────────────
 
-    {{"type": "send_email", "to": "user@example.com", "subject": "SBIN Stock Update", "body": "Your SBIN stock price update is ready"}}
-  ]
-}}
+RETRY_CORRECTION_PROMPT = """You are an automation planner. Your previous attempt to generate automation JSON failed.
 
-Example 6 (Commodities & Indices):
-Input: "Send me updates on GOLD price every 2 min"
-Output:
-{{
-  "name": "Gold Price Monitor",
-  "description": "Fetch GOLD price every 2 minutes and send email notification",
-  "trigger": {{"type": "interval", "every": "2m"}},
-  "steps": [
-    {{"type": "fetch_stock_price", "symbol": "GOLD"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "Gold Price Update", "body": "Current GOLD prices"}}
-  ]
-}}
+PREVIOUS ERROR:
+{error}
 
-Example 6.5 (Commodities in INR):
-Input: "Track GOLD price in INR every hour"
-Output:
-{{
-  "name": "Gold INR Monitor",
-  "description": "Fetch GOLD price in INR hourly",
-  "trigger": {{"type": "interval", "every": "1h"}},
-  "steps": [
-    {{"type": "scrape_groww", "url": "https://groww.in/gold-rates"}},
-    {{"type": "format_web_digest", "provider": "groww"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "Gold Rate INR (10gm)", "body": "Digest below"}}
-  ]
-}}
+INVALID OUTPUT (what you generated):
+{invalid_output}
 
-Example 7 (Indian Indices):
-Input: "Alert me on NIFTY 50 changes hourly"
-Output:
-{{
-  "name": "Nifty 50 Hourly Monitor",
-  "description": "Fetch NIFTY index every hour and notify",
-  "trigger": {{"type": "interval", "every": "1h"}},
-  "steps": [
-    {{"type": "fetch_stock_price", "symbol": "NIFTY"}},
-    {{"type": "send_notification", "message": "NIFTY 50 Index Update"}}
-  ]
-}}
-Example 8 (Stock Press Releases):
-Input: "Update me about press releases of HCLTECH"
-Output:
-{{
-  "name": "HCLTECH Press Releases",
-  "description": "Fetch top 5 press releases for HCLTECH",
-  "trigger": {{"type": "manual"}},
-  "steps": [
-    {{"type": "scrape_screener", "symbol": "HCLTECH"}},
-    {{"type": "format_web_digest", "provider": "screener"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "HCLTECH Press Releases", "body": "Digest below"}}
-  ]
-}}
+ORIGINAL USER REQUEST:
+{user_request}
 
-Example 9 (Hack2Skill Hackathons):
-Input: "Update me with top 5 recent hack2skill hackathons every week"
-Output:
-{{
-  "name": "Hack2Skill Weekly Digest",
-  "description": "Weekly digest of top 5 open hackathons from Hack2Skill",
-  "trigger": {{"type": "interval", "every": "1w"}},
-  "steps": [
-    {{"type": "scrape_hack2skill", "url": "https://hack2skill.com/", "limit": 5}},
-    {{"type": "format_web_digest", "provider": "hack2skill"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "Top 5 Hackathons", "body": "Digest below"}}
-  ]
-}}
+FIX INSTRUCTIONS:
+1. Analyze the error message above
+2. Fix ONLY the specific issue mentioned in the error
+3. Return a corrected JSON object
+4. Output ONLY valid JSON — NO markdown, NO code blocks, NO explanations
+5. Do NOT change parts of the JSON that were already correct
 
-Example 10 (Twitter Summary):
-Input: "Summarize top 10 posts from Nikhil Kamath and email me"
-Output:
-{{
-  "name": "Nikhil Kamath Feed Summary",
-  "description": "Daily digest of top 10 recent tweets from Nikhil Kamath",
-  "trigger": {{"type": "interval", "every": "1d"}},
-  "steps": [
-    {{"type": "scrape_twitter", "username": "nikhilkamathzio", "limit": 10}},
-    {{"type": "format_web_digest", "provider": "twitter"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "Nikhil Kamath Updates", "body": "Tweet Digest"}}
-  ]
-}}
+ALLOWED STEP TYPES: {allowed_steps}
 
-Example 10 (Twitter User Tweets):
-Input: "Email me the latest 5 tweets from @nikhilkamathzio every day"
-Output:
-{{
-  "name": "Nikhil Kamath Twitter Digest",
-  "description": "Daily digest of latest 5 tweets from @nikhilkamathzio",
-  "trigger": {{"type": "interval", "every": "1d"}},
-  "steps": [
-    {{"type": "scrape_twitter", "username": "nikhilkamathzio", "limit": 5}},
-    {{"type": "format_web_digest", "provider": "twitter"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "Latest Tweets from Nikhil Kamath", "body": "Digest below"}}
-  ]
-}}
-"""
+Corrected JSON output:"""
 
-# Entity extraction prompt for clarification flow
+
+# ─── Entity Extraction Prompt (unchanged from v1) ────────────────────────
+
 ENTITY_EXTRACTION_PROMPT = f"""You are an entity extractor for an automation system.
 
 Extract all information from the user's request into a structured format.
@@ -364,8 +276,8 @@ Output: {{"intent": "crypto_monitor", "entities": {{"symbol": "BTC", "interval":
 """
 
 
+# ─── Twitter Research Prompt (unchanged from v1) ─────────────────────────
 
-# System prompt for Twitter research fallback
 TWITTER_RESEARCH_PROMPT = """You are a social media researcher.
 Your task is to provide a summary of the latest 5 tweets/posts from the specified Twitter handle.
 

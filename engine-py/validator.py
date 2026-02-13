@@ -1,12 +1,47 @@
 """
-Validation Layer for Automation JSON
+Validation Layer for Automation JSON (v2)
 
-Validates LLM output before returning to Node.js.
+Registry-aware validation:
+- Dynamically loads allowed steps from Node.js registry
+- Falls back to hardcoded ALLOWED_STEPS
+- Structured error messages for retry loop
 """
 
-from typing import Tuple, Optional
+import logging
+import httpx
+from typing import Tuple, Optional, List
 from config import ALLOWED_STEPS, ALLOWED_TRIGGERS, validate_interval_format
 
+logger = logging.getLogger(__name__)
+
+# ─── Registry-Aware Step List ────────────────────────────────────────────
+
+_dynamic_allowed_steps = None
+
+def get_allowed_steps() -> list:
+    """Get allowed steps — from registry if available, else fallback."""
+    global _dynamic_allowed_steps
+    if _dynamic_allowed_steps:
+        return _dynamic_allowed_steps
+    return ALLOWED_STEPS
+
+def refresh_allowed_steps(base_url: str = "http://localhost:3000") -> list:
+    """Fetch allowed steps from Node.js registry."""
+    global _dynamic_allowed_steps
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get(f"{base_url}/registry/tools")
+            response.raise_for_status()
+            data = response.json()
+            _dynamic_allowed_steps = [t["name"] for t in data.get("tools", [])]
+            logger.info(f"✅ Validator loaded {len(_dynamic_allowed_steps)} allowed steps from registry")
+            return _dynamic_allowed_steps
+    except Exception as e:
+        logger.warning(f"⚠️ Could not refresh steps from registry: {e}. Using fallback.")
+        return ALLOWED_STEPS
+
+
+# ─── Main Validation ─────────────────────────────────────────────────────
 
 def validate_automation(data: dict) -> Tuple[bool, Optional[str]]:
     """
@@ -39,9 +74,10 @@ def validate_automation(data: dict) -> Tuple[bool, Optional[str]]:
     if not trigger_valid:
         return False, trigger_error
     
-    # Validate each step
+    # Validate each step (using dynamic allowed list)
+    allowed = get_allowed_steps()
     for i, step in enumerate(data["steps"]):
-        step_valid, step_error = validate_step(step)
+        step_valid, step_error = validate_step(step, allowed)
         if not step_valid:
             return False, f"Step {i + 1}: {step_error}"
     
@@ -55,7 +91,7 @@ def validate_trigger(trigger: dict) -> Tuple[bool, Optional[str]]:
         return False, "Trigger missing 'type' field"
     
     if trigger["type"] not in ALLOWED_TRIGGERS:
-        return False, f"Invalid trigger type: {trigger['type']}"
+        return False, f"Invalid trigger type: {trigger['type']}. Allowed: {', '.join(ALLOWED_TRIGGERS)}"
     
     # Interval trigger must have 'every' field
     if trigger["type"] == "interval":
@@ -69,8 +105,11 @@ def validate_trigger(trigger: dict) -> Tuple[bool, Optional[str]]:
     return True, None
 
 
-def validate_step(step: dict) -> Tuple[bool, Optional[str]]:
-    """Validate a single step."""
+def validate_step(step: dict, allowed_steps: list = None) -> Tuple[bool, Optional[str]]:
+    """Validate a single step against allowed steps."""
+    
+    if allowed_steps is None:
+        allowed_steps = get_allowed_steps()
     
     if not isinstance(step, dict):
         return False, "Step must be an object"
@@ -81,8 +120,8 @@ def validate_step(step: dict) -> Tuple[bool, Optional[str]]:
     step_type = step["type"]
     
     # Check against allowed steps (ANTI-HALLUCINATION)
-    if step_type not in ALLOWED_STEPS:
-        return False, f"Unsupported step type: {step_type}"
+    if step_type not in allowed_steps:
+        return False, f"Unsupported step type: '{step_type}'. Allowed types: {', '.join(allowed_steps)}"
     
     # Validate step-specific required fields
     if step_type == "fetch_stock_price":
@@ -100,10 +139,26 @@ def validate_step(step: dict) -> Tuple[bool, Optional[str]]:
     elif step_type == "send_whatsapp":
         if "to" not in step:
             return False, "send_whatsapp requires 'to'"
+        if "message" not in step:
+            return False, "send_whatsapp requires 'message'"
     
     elif step_type == "send_sms":
         if "to" not in step:
             return False, "send_sms requires 'to'"
+        if "message" not in step:
+            return False, "send_sms requires 'message'"
+    
+    elif step_type == "send_discord":
+        if "webhook_url" not in step:
+            return False, "send_discord requires 'webhook_url'"
+        if "message" not in step:
+            return False, "send_discord requires 'message'"
+    
+    elif step_type == "send_slack":
+        if "webhook_url" not in step:
+            return False, "send_slack requires 'webhook_url'"
+        if "message" not in step:
+            return False, "send_slack requires 'message'"
     
     elif step_type == "job_search":
         if "query" not in step:
@@ -111,7 +166,15 @@ def validate_step(step: dict) -> Tuple[bool, Optional[str]]:
     
     elif step_type == "condition":
         if "if" not in step:
-            return False, "condition requires 'if'"
+            return False, "condition requires 'if' field (not 'condition')"
+    
+    elif step_type == "scrape_reddit":
+        if "subreddit" not in step:
+            return False, "scrape_reddit requires 'subreddit'"
+    
+    elif step_type == "scrape_twitter":
+        if "username" not in step:
+            return False, "scrape_twitter requires 'username'"
     
     return True, None
 

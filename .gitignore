@@ -16,5 +16,10 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Python
+engine-py/venv/
+__pycache__/
+*.pyc
+
 # Firebase
 serviceAccountKey.json

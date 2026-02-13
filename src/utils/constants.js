@@ -14,5 +14,12 @@ export const EXECUTION_STATUS = {
     PENDING: 'pending',
     RUNNING: 'running',
     SUCCESS: 'success',
-    FAILED: 'failed'
+    FAILED: 'failed',
+    RETRYING: 'retrying',
+    FIXED_BY_AI: 'fixed_by_ai'
 };
+
+/**
+ * Initial workflow schema version
+ */
+export const WORKFLOW_VERSION = '1.0.0';

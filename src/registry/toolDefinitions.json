@@ -1,0 +1,821 @@
+{
+    "registryVersion": "1.0.0",
+    "lastUpdated": "2026-02-12",
+    "tools": [
+        {
+            "name": "fetch_stock_price",
+            "version": "1.0.0",
+            "description": "Fetch real-time stock price from Yahoo Finance",
+            "category": "data_fetch",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock ticker symbol (e.g., AAPL, TSLA, SBIN.NS)"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "type": "number"
+                    },
+                    "change": {
+                        "type": "string"
+                    },
+                    "changePercent": {
+                        "type": "string"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "marketState": {
+                        "type": "string"
+                    },
+                    "timestamp": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "fetch_crypto_price",
+            "version": "1.0.0",
+            "description": "Fetch real-time cryptocurrency price from CoinGecko",
+            "category": "data_fetch",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Crypto symbol (e.g., BTC, ETH, SOL)"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "type": "number"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "timestamp": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "fetch_weather",
+            "version": "1.0.0",
+            "description": "Fetch current weather data from OpenWeatherMap",
+            "category": "data_fetch",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "City name or location (e.g., Mumbai, London, New York)"
+                    }
+                },
+                "required": [
+                    "location"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string"
+                    },
+                    "temperature": {
+                        "type": "number"
+                    },
+                    "condition": {
+                        "type": "string"
+                    },
+                    "humidity": {
+                        "type": "number"
+                    },
+                    "timestamp": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "fetch_data",
+            "version": "1.0.0",
+            "description": "Generic data fetcher supporting multiple data sources",
+            "category": "data_fetch",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "type": "string",
+                        "description": "Data source type (e.g., stock, crypto, weather)"
+                    },
+                    "symbol": {
+                        "type": "string",
+                        "description": "Symbol or identifier for the data source"
+                    }
+                },
+                "required": [
+                    "source"
+                ]
+            },
+            "outputSchema": {
+                "type": "object"
+            }
+        },
+        {
+            "name": "scrape_github",
+            "version": "1.0.0",
+            "description": "Scrape GitHub user profile, starred repos, or repositories",
+            "category": "web_scraping",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "description": "GitHub username"
+                    },
+                    "repo_type": {
+                        "type": "string",
+                        "description": "Type of repos to fetch: stars, repos, trending",
+                        "default": "stars"
+                    }
+                },
+                "required": [
+                    "username"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array"
+                    },
+                    "source": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "scrape_hackernews",
+            "version": "1.0.0",
+            "description": "Scrape top, new, or best stories from HackerNews",
+            "category": "web_scraping",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "story_type": {
+                        "type": "string",
+                        "description": "Story type: top, new, best",
+                        "default": "top"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Number of stories to fetch",
+                        "default": 10
+                    },
+                    "keyword": {
+                        "type": "string",
+                        "description": "Optional keyword to filter stories"
+                    }
+                },
+                "required": []
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array"
+                    },
+                    "source": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "scrape_reddit",
+            "version": "1.0.0",
+            "description": "Scrape posts from a Reddit subreddit",
+            "category": "web_scraping",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "subreddit": {
+                        "type": "string",
+                        "description": "Subreddit name without /r/ prefix"
+                    },
+                    "sort": {
+                        "type": "string",
+                        "description": "Sort order: hot, new, top",
+                        "default": "hot"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of posts to fetch",
+                        "default": 10
+                    }
+                },
+                "required": [
+                    "subreddit"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array"
+                    },
+                    "source": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "scrape_screener",
+            "version": "1.0.0",
+            "description": "Scrape stock data from Screener.in",
+            "category": "web_scraping",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock symbol to look up on Screener"
+                    }
+                },
+                "required": [
+                    "symbol"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array"
+                    },
+                    "source": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "scrape_groww",
+            "version": "1.0.0",
+            "description": "Scrape investment data from Groww (gold rates, mutual funds)",
+            "category": "web_scraping",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "Groww page URL to scrape",
+                        "default": "https://groww.in/gold-rates"
+                    }
+                },
+                "required": []
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array"
+                    },
+                    "source": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "scrape_hack2skill",
+            "version": "1.0.0",
+            "description": "Scrape hackathon listings from Hack2Skill",
+            "category": "web_scraping",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "Hack2Skill page URL",
+                        "default": "https://hack2skill.com/"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of listings to fetch"
+                    }
+                },
+                "required": []
+            },
+            "outputSchema": {
+                "type": "object"
+            }
+        },
+        {
+            "name": "scrape_twitter",
+            "version": "1.0.0",
+            "description": "Scrape recent tweets from a Twitter/X user",
+            "category": "web_scraping",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "description": "Twitter username to scrape"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of tweets to fetch",
+                        "default": 5
+                    }
+                },
+                "required": [
+                    "username"
+                ]
+            },
+            "outputSchema": {
+                "type": "object"
+            }
+        },
+        {
+            "name": "format_web_digest",
+            "version": "1.0.0",
+            "description": "Format scraped web data into a readable digest for notifications",
+            "category": "data_transform",
+            "mcpExposable": false,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "provider": {
+                        "type": "string",
+                        "description": "Provider name for formatting (e.g., hackernews, github, reddit)"
+                    }
+                },
+                "required": [
+                    "provider"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "digest": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "send_email",
+            "version": "1.0.0",
+            "description": "Send an email via SendGrid",
+            "category": "notification",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "to": {
+                        "type": "string",
+                        "description": "Recipient email address (use 'user@example.com' for logged-in user)"
+                    },
+                    "subject": {
+                        "type": "string",
+                        "description": "Email subject line"
+                    },
+                    "body": {
+                        "type": "string",
+                        "description": "Email body content"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Alternative to body for simple messages"
+                    }
+                },
+                "required": [
+                    "to"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "sent": {
+                        "type": "boolean"
+                    },
+                    "channel": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "send_whatsapp",
+            "version": "1.0.0",
+            "description": "Send a WhatsApp message via Twilio",
+            "category": "notification",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "to": {
+                        "type": "string",
+                        "description": "Phone number with country code (e.g., +919876543210)"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Message text to send"
+                    }
+                },
+                "required": [
+                    "to",
+                    "message"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "sent": {
+                        "type": "boolean"
+                    },
+                    "channel": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "send_sms",
+            "version": "1.0.0",
+            "description": "Send an SMS message via Twilio",
+            "category": "notification",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "to": {
+                        "type": "string",
+                        "description": "Phone number with country code"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "SMS message text"
+                    }
+                },
+                "required": [
+                    "to",
+                    "message"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "sent": {
+                        "type": "boolean"
+                    },
+                    "channel": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "send_notification",
+            "version": "1.0.0",
+            "description": "Send an in-app notification (console log)",
+            "category": "notification",
+            "mcpExposable": false,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Notification message"
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "sent": {
+                        "type": "boolean"
+                    },
+                    "channel": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "send_discord",
+            "version": "1.0.0",
+            "description": "Send a message to a Discord channel via webhook",
+            "category": "notification",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "webhook_url": {
+                        "type": "string",
+                        "description": "Discord webhook URL"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Message text"
+                    },
+                    "options": {
+                        "type": "object",
+                        "description": "Additional Discord message options (embeds, username)"
+                    }
+                },
+                "required": [
+                    "webhook_url",
+                    "message"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "sent": {
+                        "type": "boolean"
+                    },
+                    "channel": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "send_slack",
+            "version": "1.0.0",
+            "description": "Send a message to a Slack channel via webhook",
+            "category": "notification",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "webhook_url": {
+                        "type": "string",
+                        "description": "Slack webhook URL"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Message text"
+                    },
+                    "options": {
+                        "type": "object",
+                        "description": "Additional Slack message options"
+                    }
+                },
+                "required": [
+                    "webhook_url",
+                    "message"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "sent": {
+                        "type": "boolean"
+                    },
+                    "channel": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "notify",
+            "version": "1.0.0",
+            "description": "Generic notification router — sends to specified channel (email, whatsapp, sms, discord, slack)",
+            "category": "notification",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "channel": {
+                        "type": "string",
+                        "description": "Notification channel: email, whatsapp, sms, discord, slack, notification"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Message text"
+                    },
+                    "to": {
+                        "type": "string",
+                        "description": "Recipient (email address or phone number)"
+                    },
+                    "subject": {
+                        "type": "string",
+                        "description": "Subject line (for email only)"
+                    }
+                },
+                "required": [
+                    "channel",
+                    "message"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "sent": {
+                        "type": "boolean"
+                    },
+                    "channel": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "job_search",
+            "version": "1.0.0",
+            "description": "Search for job listings (mock implementation)",
+            "category": "data_fetch",
+            "mcpExposable": false,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Job search query (e.g., ML Engineer, Frontend Developer)"
+                    },
+                    "location": {
+                        "type": "string",
+                        "description": "Job location (e.g., Remote, Bangalore)"
+                    }
+                },
+                "required": [
+                    "query"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array"
+                    },
+                    "count": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        {
+            "name": "job_apply",
+            "version": "1.0.0",
+            "description": "Apply to a job listing (mock implementation)",
+            "category": "action",
+            "mcpExposable": false,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "jobId": {
+                        "type": "string",
+                        "description": "Job listing ID to apply to"
+                    }
+                },
+                "required": []
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "applied": {
+                        "type": "boolean"
+                    },
+                    "jobId": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "fetch_url",
+            "version": "1.0.0",
+            "description": "Fetch data from a URL (mock implementation)",
+            "category": "data_fetch",
+            "mcpExposable": false,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "URL to fetch data from"
+                    }
+                },
+                "required": [
+                    "url"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "integer"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                }
+            }
+        },
+        {
+            "name": "condition",
+            "version": "1.0.0",
+            "description": "Evaluate a conditional expression (mock implementation)",
+            "category": "control_flow",
+            "mcpExposable": false,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "if": {
+                        "type": "string",
+                        "description": "Conditional expression to evaluate"
+                    }
+                },
+                "required": [
+                    "if"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "condition": {
+                        "type": "string"
+                    },
+                    "result": {
+                        "type": "boolean"
+                    }
+                }
+            }
+        },
+        {
+            "name": "delay",
+            "version": "1.0.0",
+            "description": "Wait for a specified duration before proceeding",
+            "category": "control_flow",
+            "mcpExposable": false,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "duration": {
+                        "type": "string",
+                        "description": "Duration to wait (e.g., 1s, 5m, 1h)"
+                    }
+                },
+                "required": [
+                    "duration"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "delayed": {
+                        "type": "boolean"
+                    },
+                    "duration": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    ]
+}

@@ -1,19 +1,48 @@
 /**
- * Workflow Executor
+ * Workflow Executor v2
  * 
- * Executes automation steps sequentially and tracks execution status.
+ * Self-healing workflow execution engine with:
+ * - Step-level retry with exponential backoff
+ * - Context memory layer (cross-step data sharing)
+ * - Execution state machine (PENDING → RUNNING → [RETRYING] → SUCCESS | FAILED)
+ * - Structured logging with state transitions
+ * - Workflow version tracking
  * 
- * Lifecycle: PENDING → RUNNING → SUCCESS | FAILED
+ * Backward compatible: same external API as v1
  */
 
 import { db } from '../config/firebase.js';
-import stepRegistry, { isStepSupported, getStepHandler } from './stepRegistry.js';
+import { isStepSupported, getStepHandler } from './stepRegistry.js';
 import { EXECUTION_STATUS } from '../utils/constants.js';
 import logger from '../utils/logger.js';
+import {
+    logStateTransition,
+    updateExecutionStatus,
+    logStepResult,
+    ContextMemory,
+    stampWorkflowVersion,
+    trackWorkflowVersion
+} from '../utils/executionLogger.js';
+
+// ─── Configuration ─────────────────────────────────────────────────────
+
+const RETRY_CONFIG = {
+    maxRetries: 3,
+    baseDelayMs: 1000,         // 1s, 2s, 4s exponential
+    maxDelayMs: 10000,
+    retryableErrors: [
+        'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND',
+        'rate limit', 'Rate limit', '429', '503', '504',
+        'timeout', 'Timeout', 'TIMEOUT',
+        'network error', 'Network Error',
+        'socket hang up', 'EAI_AGAIN'
+    ]
+};
+
+// ─── Helpers ───────────────────────────────────────────────────────────
 
 /**
- * Recursively remove undefined values from an object
- * Firestore doesn't allow undefined values, so we clean them before saving
+ * Recursively remove undefined values from an object (Firestore compat)
  */
 const removeUndefined = (obj) => {
     if (obj === null || obj === undefined) return null;
@@ -31,7 +60,143 @@ const removeUndefined = (obj) => {
 };
 
 /**
- * Execute a workflow automation
+ * Check if an error is retryable (transient)
+ */
+function isRetryable(error) {
+    const message = (error?.message || '').toLowerCase();
+    const code = error?.code || '';
+
+    return RETRY_CONFIG.retryableErrors.some(pattern =>
+        message.includes(pattern.toLowerCase()) || code === pattern
+    );
+}
+
+/**
+ * Calculate delay for exponential backoff
+ */
+function getRetryDelay(attempt) {
+    const delay = RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt);
+    // Add jitter (±25%)
+    const jitter = delay * 0.25 * (Math.random() * 2 - 1);
+    return Math.min(delay + jitter, RETRY_CONFIG.maxDelayMs);
+}
+
+/**
+ * Sleep for a specified duration
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ─── Step Execution with Retry ─────────────────────────────────────────
+
+/**
+ * Execute a single step with retry logic for transient failures.
+ * 
+ * @param {Object} step - The step definition (type, params)
+ * @param {Object} context - Execution context with stepOutputs
+ * @param {number} stepNumber - Step index (1-based)
+ * @param {string} executionId - Execution ID for logging
+ * @returns {Object} { output, duration_ms, retries, error }
+ */
+async function executeStepWithRetry(step, context, stepNumber, executionId) {
+    const handler = getStepHandler(step.type);
+
+    if (!handler) {
+        throw new Error(`No handler found for step type: ${step.type}`);
+    }
+
+    let lastError = null;
+    let retries = 0;
+
+    for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+        const stepStartTime = Date.now();
+
+        try {
+            const output = await handler(step, context);
+            const duration_ms = Date.now() - stepStartTime;
+
+            if (retries > 0) {
+                logger.info(`Step ${stepNumber} succeeded after ${retries} retries`, {
+                    executionId,
+                    stepType: step.type,
+                    duration_ms
+                });
+            }
+
+            return {
+                output,
+                duration_ms,
+                retries,
+                error: null
+            };
+
+        } catch (error) {
+            lastError = error;
+            const duration_ms = Date.now() - stepStartTime;
+
+            // Non-retryable error: fail immediately
+            if (!isRetryable(error) || attempt === RETRY_CONFIG.maxRetries) {
+                logger.error(`Step ${stepNumber} failed (${step.type})`, {
+                    executionId,
+                    attempt: attempt + 1,
+                    retryable: isRetryable(error),
+                    error: error.message,
+                    duration_ms
+                });
+
+                return {
+                    output: null,
+                    duration_ms,
+                    retries,
+                    error: error.message
+                };
+            }
+
+            // Retryable error: log and wait
+            retries++;
+            const delayMs = getRetryDelay(attempt);
+
+            logger.warn(`Step ${stepNumber} failed (retryable), attempt ${attempt + 1}/${RETRY_CONFIG.maxRetries + 1}`, {
+                executionId,
+                stepType: step.type,
+                error: error.message,
+                nextRetryMs: delayMs
+            });
+
+            // Log retry state transition
+            await logStateTransition(executionId, EXECUTION_STATUS.RUNNING, EXECUTION_STATUS.RETRYING, {
+                step: stepNumber,
+                stepType: step.type,
+                attempt: attempt + 1,
+                error: error.message,
+                retryDelayMs: delayMs
+            });
+
+            await sleep(delayMs);
+
+            // Log transition back to running
+            await logStateTransition(executionId, EXECUTION_STATUS.RETRYING, EXECUTION_STATUS.RUNNING, {
+                step: stepNumber,
+                stepType: step.type,
+                retryAttempt: attempt + 2
+            });
+        }
+    }
+
+    // Should not reach here, but safety net
+    return {
+        output: null,
+        duration_ms: 0,
+        retries,
+        error: lastError?.message || 'Unknown error after retries'
+    };
+}
+
+// ─── Main Executor ─────────────────────────────────────────────────────
+
+/**
+ * Execute a workflow automation with retry, context memory, and state tracking.
  * 
  * @param {Object} automation - The automation object with steps
  * @param {string} executionId - The execution record ID
@@ -42,25 +207,30 @@ export const executeWorkflow = async (automation, executionId, user = null) => {
     const startTime = Date.now();
     const stepResults = [];
 
+    // Initialize context memory
+    const memory = new ContextMemory(executionId, automation.id, user);
+
     logger.info('Starting workflow execution', {
         executionId,
         automationId: automation.id,
         automationName: automation.name,
-        stepCount: automation.steps.length,
+        stepCount: automation.steps?.length || 0,
         userId: user?.id
     });
 
-    // Build execution context - will contain outputs from previous steps
-    const context = {
-        automation,
-        executionId,
-        user: user || {}, // Include user info for personalized notifications
-        startTime: new Date().toISOString(),
-        stepOutputs: {}
-    };
+    // Log state: PENDING → RUNNING
+    await logStateTransition(executionId, EXECUTION_STATUS.PENDING, EXECUTION_STATUS.RUNNING, {
+        automationId: automation.id,
+        automationName: automation.name,
+        stepCount: automation.steps?.length || 0
+    });
+
+    await updateExecutionStatus(executionId, EXECUTION_STATUS.RUNNING, {
+        started_at: new Date().toISOString()
+    });
 
     try {
-        // Get steps from automation (handle both parsed and stringified JSON)
+        // Parse steps (handle both parsed and stringified JSON)
         const steps = typeof automation.steps === 'string'
             ? JSON.parse(automation.steps)
             : automation.steps;
@@ -80,52 +250,74 @@ export const executeWorkflow = async (automation, executionId, user = null) => {
                 throw new Error(`Unsupported step type: ${step.type}`);
             }
 
-            // Get step handler
-            const handler = getStepHandler(step.type);
+            // Build context from memory (backward compatible)
+            const stepContext = memory.buildStepContext();
+            stepContext.automation = automation; // attach full automation
 
-            // Execute step
-            const stepStartTime = Date.now();
-            const output = await handler(step, context);
-            const stepDuration = Date.now() - stepStartTime;
+            // Execute with retry
+            const result = await executeStepWithRetry(step, stepContext, stepNumber, executionId);
 
-            // Store step result
+            // Log step result to Firebase
+            await logStepResult(executionId, i, step.type, result);
+
+            // If step failed after retries, abort workflow
+            if (result.error) {
+                throw new Error(`Step ${stepNumber} (${step.type}) failed: ${result.error}`);
+            }
+
+            // Store result in context memory
+            memory.storeStepOutput(i, step.type, result.output);
+
+            // Also store named output if specified
+            if (step.outputAs) {
+                memory.stepOutputs[step.outputAs] = result.output;
+            }
+
+            // Build step result record
             const stepResult = {
                 step: stepNumber,
                 type: step.type,
-                output,
-                duration: stepDuration
+                output: result.output,
+                duration: result.duration_ms,
+                retries: result.retries
             };
             stepResults.push(stepResult);
-
-            // Add output to context for next steps
-            context.stepOutputs[`step_${stepNumber}`] = output;
-            if (step.outputAs) {
-                context.stepOutputs[step.outputAs] = output;
-            }
 
             logger.debug(`Step ${stepNumber} completed`, {
                 executionId,
                 stepType: step.type,
-                duration: stepDuration
+                duration: result.duration_ms,
+                retries: result.retries
             });
         }
 
-        // All steps completed successfully
+        // ─── All steps completed successfully ───────────────────────────
         const totalDuration = Date.now() - startTime;
 
         logger.info('Workflow execution completed', {
             executionId,
             status: 'success',
-            duration: totalDuration
+            duration: totalDuration,
+            totalRetries: stepResults.reduce((sum, s) => sum + (s.retries || 0), 0)
         });
 
-        // Update execution record with success
+        // Log state: RUNNING → SUCCESS
+        await logStateTransition(executionId, EXECUTION_STATUS.RUNNING, EXECUTION_STATUS.SUCCESS, {
+            duration_ms: totalDuration,
+            stepsCompleted: stepResults.length
+        });
+
+        // Persist context memory snapshot
+        await memory.persist();
+
+        // Update execution record
         await db.collection('executions').doc(executionId).update({
             status: EXECUTION_STATUS.SUCCESS,
             result: removeUndefined({
                 steps: stepResults,
                 duration: totalDuration,
-                completedAt: new Date().toISOString()
+                completedAt: new Date().toISOString(),
+                totalRetries: stepResults.reduce((sum, s) => sum + (s.retries || 0), 0)
             })
         });
 
@@ -146,7 +338,17 @@ export const executeWorkflow = async (automation, executionId, user = null) => {
             duration: totalDuration
         });
 
-        // Update execution record with failure
+        // Log state: RUNNING → FAILED
+        await logStateTransition(executionId, EXECUTION_STATUS.RUNNING, EXECUTION_STATUS.FAILED, {
+            error: error.message,
+            duration_ms: totalDuration,
+            stepsCompleted: stepResults.length
+        });
+
+        // Persist context memory for debugging
+        await memory.persist();
+
+        // Update execution record
         await db.collection('executions').doc(executionId).update({
             status: EXECUTION_STATUS.FAILED,
             error: error.message,

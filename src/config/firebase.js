@@ -16,11 +16,20 @@ try {
 
     let serviceAccount;
     try {
-        console.log('TRACE: Loading service account');
+        console.log('TRACE: Loading service account from file');
         serviceAccount = require('../../serviceAccountKey.json');
-        console.log('TRACE: Service account loaded');
+        console.log('TRACE: Service account loaded from file');
     } catch (error) {
-        logger.warn('serviceAccountKey.json not found, checking environment variables');
+        logger.warn('serviceAccountKey.json not found, checking FIREBASE_SERVICE_ACCOUNT env var');
+        // Fallback: read from environment variable (for Render/cloud deployment)
+        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+            try {
+                serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+                console.log('TRACE: Service account loaded from env variable');
+            } catch (parseError) {
+                logger.error('Failed to parse FIREBASE_SERVICE_ACCOUNT env var:', parseError.message);
+            }
+        }
     }
 
     if (serviceAccount) {
