@@ -22,6 +22,14 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 # Gemini API Key (primary LLM)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
+# Groq API Key (get free at https://console.groq.com — 30 RPM, 14,400 req/day free)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+# HuggingFace Inference API Key (get free at https://huggingface.co/settings/tokens)
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")
+HUGGINGFACE_MODEL = os.getenv("HUGGINGFACE_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
+
 # Model configuration
 LLM_MODEL = os.getenv("LLM_MODEL", "meta-llama/llama-3.2-3b-instruct:free")
 

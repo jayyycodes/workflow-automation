@@ -22,16 +22,20 @@ const fetch = async (params) => {
 
     // Get story IDs
     const idsUrl = `https://hacker-news.firebaseio.com/v0/${story_type}stories.json`;
-    const { data: ids } = await axios.get(idsUrl, { timeout: 5000 });
+    const { data: ids } = await axios.get(idsUrl, { timeout: 15000 });
 
-    // Fetch stories
+    // Fetch stories (with individual error handling so one slow story doesn't break all)
     const stories = await Promise.all(
         ids.slice(0, fetchCount).map(async (id) => {
-            const { data } = await axios.get(
-                `https://hacker-news.firebaseio.com/v0/item/${id}.json`,
-                { timeout: 5000 }
-            );
-            return data;
+            try {
+                const { data } = await axios.get(
+                    `https://hacker-news.firebaseio.com/v0/item/${id}.json`,
+                    { timeout: 10000 }
+                );
+                return data;
+            } catch {
+                return null; // Skip failed individual stories
+            }
         })
     );
 

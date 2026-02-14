@@ -133,10 +133,12 @@ const sendEmail = async (params, context) => {
         logger.info('Using logged-in user email for notification', { email: recipientEmail });
     }
 
-    // DIGEST CHECK - look for format_web_digest step output
-    const digestCheck = context.stepOutputs || {};
-    const formattedDigest = Object.values(digestCheck).find(o => typeof o === 'object' && o?.digest);
+    // ─── Collect ALL previous step outputs ──────────────────────────────
+    const previousStepOutputs = context.stepOutputs || {};
+    const outputs = Object.values(previousStepOutputs);
 
+    // DIGEST CHECK - if format_web_digest produced a result, use it directly
+    const formattedDigest = outputs.find(o => typeof o === 'object' && o?.digest);
     if (formattedDigest?.digest) {
         logger.info('📧 Using formatted web digest');
         return notify({
@@ -147,57 +149,195 @@ const sendEmail = async (params, context) => {
         }, context);
     }
 
-    // Build email body with data from previous steps
-    let emailBody = params.body || params.message || 'Automation notification';
+    // ─── Smart Content Builder ─────────────────────────────────────────
+    // Categorize all step outputs by type
+    const stockData = [];
+    const cryptoData = [];
+    const weatherData = [];
+    const scraperData = [];
+    const otherData = [];
 
-    // If there's stock price data from previous step, include it
-    const previousStepOutputs = context.stepOutputs || {};
-    const stockData = Object.values(previousStepOutputs).find(output => output?.symbol && output?.price);
+    for (const output of outputs) {
+        if (!output || typeof output !== 'object') continue;
 
-    // Check for weather data from previous steps
-    const weatherData = Object.values(previousStepOutputs).find(
-        output => output?.location && output?.temperature !== undefined
-    );
-
-    if (weatherData) {
-        const isMock = weatherData.mock ? ' (Mock Data)' : '';
-        emailBody = `
-🌤️ Weather Update for ${weatherData.location}${isMock}
-
-Temperature: ${weatherData.temperature}°C (${weatherData.temperature_f}°F)
-Condition: ${weatherData.condition}${weatherData.description ? ' - ' + weatherData.description : ''}
-Feels Like: ${weatherData.feels_like}°C
-Humidity: ${weatherData.humidity}%
-Wind Speed: ${weatherData.wind_speed} km/h
-
-Last Updated: ${new Date(weatherData.timestamp).toLocaleString()}
-
-${weatherData.error ? `⚠️  ${weatherData.error}\n${weatherData.help}` : ''}
----
-Powered by Smart Workflow Automation
-        `.trim();
-
-        logger.info('Email enhanced with weather data', { location: weatherData.location });
-    } else if (stockData) {
-        emailBody = `
-Stock Update: ${stockData.symbol}
-
-Current Price: ${stockData.currency || ''} ${stockData.price}
-Change: ${stockData.change} (${stockData.changePercent})
-Market State: ${stockData.marketState || 'Unknown'}
-Last Updated: ${new Date(stockData.timestamp).toLocaleString()}
-
----
-This is an automated notification from your Smart Workflow Automation system.
-        `.trim();
-
-        logger.info('Enhanced email with stock data', { symbol: stockData.symbol, price: stockData.price });
+        if (output.provider === 'coingecko' || (output.symbol && output.change24h !== undefined)) {
+            cryptoData.push(output);
+        } else if (output.symbol && output.price && output.marketState !== undefined) {
+            stockData.push(output);
+        } else if (output.symbol && output.price && output.currency) {
+            stockData.push(output);
+        } else if (output.location && output.temperature !== undefined) {
+            weatherData.push(output);
+        } else if (output.stories || output.posts || output.repos || output.items || Array.isArray(output.results)) {
+            scraperData.push(output);
+        } else if (output.sent || output.placeholder || output.digest) {
+            // skip notification/placeholder outputs
+        } else {
+            otherData.push(output);
+        }
     }
+
+    // ─── Build email body based on what was collected ───────────────────
+    let emailBody = '';
+    const automationName = context.automation?.name || 'Automation';
+
+    // Crypto comparison / report
+    if (cryptoData.length > 0) {
+        if (cryptoData.length === 1) {
+            const c = cryptoData[0];
+            const arrow = parseFloat(c.change24h) >= 0 ? '📈' : '📉';
+            emailBody += `${arrow} Crypto Update: ${c.symbol}\n\n`;
+            emailBody += `   Price:      $${c.price}\n`;
+            emailBody += `   24h Change: ${c.changePercent} ${parseFloat(c.change24h) >= 0 ? '▲' : '▼'}\n`;
+            emailBody += `   Source:     ${c.provider || 'CoinGecko'}\n`;
+            emailBody += `   Updated:    ${new Date(c.timestamp).toLocaleString()}\n`;
+        } else {
+            emailBody += `📊 Crypto Comparison Report\n`;
+            emailBody += `${'═'.repeat(40)}\n\n`;
+
+            // Table header
+            emailBody += `${'Coin'.padEnd(8)} ${'Price'.padStart(12)} ${'24h Change'.padStart(12)}\n`;
+            emailBody += `${'─'.repeat(8)} ${'─'.repeat(12)} ${'─'.repeat(12)}\n`;
+
+            for (const c of cryptoData) {
+                const arrow = parseFloat(c.change24h) >= 0 ? '▲' : '▼';
+                emailBody += `${(c.symbol || '').padEnd(8)} ${('$' + c.price).padStart(12)} ${(c.changePercent + ' ' + arrow).padStart(12)}\n`;
+            }
+
+            emailBody += `\n`;
+
+            // Quick analysis
+            const sorted = [...cryptoData].sort((a, b) => parseFloat(b.change24h) - parseFloat(a.change24h));
+            emailBody += `🏆 Best Performer:  ${sorted[0].symbol} (${sorted[0].changePercent})\n`;
+            emailBody += `📉 Worst Performer: ${sorted[sorted.length - 1].symbol} (${sorted[sorted.length - 1].changePercent})\n`;
+        }
+    }
+
+    // Stock market report
+    if (stockData.length > 0) {
+        if (emailBody) emailBody += '\n';
+
+        if (stockData.length === 1) {
+            const s = stockData[0];
+            const arrow = parseFloat(s.change) >= 0 ? '📈' : '📉';
+            emailBody += `${arrow} Stock Update: ${s.symbol}\n\n`;
+            emailBody += `   Price:        ${s.currency || '$'} ${s.price}\n`;
+            emailBody += `   Change:       ${s.change} (${s.changePercent})\n`;
+            emailBody += `   Market State: ${s.marketState || 'N/A'}\n`;
+            emailBody += `   Updated:      ${new Date(s.timestamp).toLocaleString()}\n`;
+        } else {
+            emailBody += `📊 Stock Market Report\n`;
+            emailBody += `${'═'.repeat(40)}\n\n`;
+
+            emailBody += `${'Symbol'.padEnd(10)} ${'Price'.padStart(12)} ${'Change'.padStart(12)}\n`;
+            emailBody += `${'─'.repeat(10)} ${'─'.repeat(12)} ${'─'.repeat(12)}\n`;
+
+            for (const s of stockData) {
+                const arrow = parseFloat(s.change) >= 0 ? '▲' : '▼';
+                emailBody += `${(s.symbol || '').padEnd(10)} ${((s.currency || '$') + s.price).padStart(12)} ${(s.changePercent + ' ' + arrow).padStart(12)}\n`;
+            }
+
+            emailBody += '\n';
+            const sorted = [...stockData].sort((a, b) => parseFloat(b.change) - parseFloat(a.change));
+            emailBody += `🏆 Top Gainer: ${sorted[0].symbol} (${sorted[0].changePercent})\n`;
+        }
+    }
+
+    // Weather report
+    if (weatherData.length > 0) {
+        if (emailBody) emailBody += '\n';
+
+        for (const w of weatherData) {
+            const isMock = w.mock ? ' (Mock Data)' : '';
+            emailBody += `🌤️ Weather Update for ${w.location}${isMock}\n\n`;
+            emailBody += `   Temperature: ${w.temperature}°C (${w.temperature_f}°F)\n`;
+            emailBody += `   Condition:   ${w.condition}${w.description ? ' - ' + w.description : ''}\n`;
+            emailBody += `   Feels Like:  ${w.feels_like}°C\n`;
+            emailBody += `   Humidity:    ${w.humidity}%\n`;
+            emailBody += `   Wind Speed:  ${w.wind_speed} km/h\n`;
+            emailBody += `   Updated:     ${new Date(w.timestamp).toLocaleString()}\n`;
+
+            if (w.error) {
+                emailBody += `\n   ⚠️ ${w.error}\n   ${w.help}\n`;
+            }
+        }
+    }
+
+    // Scraper data (HackerNews, GitHub, Reddit, etc.)
+    if (scraperData.length > 0) {
+        if (emailBody) emailBody += '\n';
+
+        for (const data of scraperData) {
+            if (data.stories) {
+                // HackerNews
+                emailBody += `📰 HackerNews Digest\n`;
+                emailBody += `${'═'.repeat(40)}\n\n`;
+                const stories = Array.isArray(data.stories) ? data.stories.slice(0, 10) : [];
+                stories.forEach((story, i) => {
+                    emailBody += `${i + 1}. ${story.title || story.name || 'Untitled'}\n`;
+                    if (story.url) emailBody += `   🔗 ${story.url}\n`;
+                    if (story.points) emailBody += `   ⬆️ ${story.points} points | 💬 ${story.comments || 0} comments\n`;
+                    emailBody += '\n';
+                });
+            } else if (data.repos) {
+                // GitHub
+                emailBody += `🐙 GitHub Summary\n`;
+                emailBody += `${'═'.repeat(40)}\n\n`;
+                const repos = Array.isArray(data.repos) ? data.repos.slice(0, 10) : [];
+                repos.forEach((repo, i) => {
+                    emailBody += `${i + 1}. ${repo.name || repo.full_name || 'Untitled'}\n`;
+                    if (repo.description) emailBody += `   ${repo.description}\n`;
+                    emailBody += `   ⭐ ${repo.stars || 0} stars\n\n`;
+                });
+            } else if (data.posts) {
+                // Reddit
+                emailBody += `🔴 Reddit Digest\n`;
+                emailBody += `${'═'.repeat(40)}\n\n`;
+                const posts = Array.isArray(data.posts) ? data.posts.slice(0, 10) : [];
+                posts.forEach((post, i) => {
+                    emailBody += `${i + 1}. ${post.title || 'Untitled'}\n`;
+                    if (post.url) emailBody += `   🔗 ${post.url}\n`;
+                    emailBody += `   ⬆️ ${post.upvotes || post.score || 0} upvotes\n\n`;
+                });
+            }
+        }
+    }
+
+    // Fallback: use params body/message or describe other data
+    if (!emailBody) {
+        emailBody = params.body || params.message || '';
+
+        // If there's uncategorized data, format it neatly
+        if (otherData.length > 0 && !emailBody) {
+            emailBody = `📋 Automation Report\n${'═'.repeat(40)}\n\n`;
+            for (const data of otherData) {
+                emailBody += Object.entries(data)
+                    .map(([key, val]) => `   ${key}: ${typeof val === 'object' ? JSON.stringify(val) : val}`)
+                    .join('\n');
+                emailBody += '\n\n';
+            }
+        }
+
+        if (!emailBody) {
+            emailBody = 'Automation notification';
+        }
+    }
+
+    // Add footer
+    emailBody += `\n---\nPowered by SmartFlow • ${new Date().toLocaleString()}`;
+
+    logger.info('📧 Smart email built', {
+        crypto: cryptoData.length,
+        stocks: stockData.length,
+        weather: weatherData.length,
+        scrapers: scraperData.length
+    });
 
     return notify({
         channel: 'email',
         ...params,
         to: recipientEmail,
+        subject: params.subject || automationName,
         body: emailBody
     }, context);
 };

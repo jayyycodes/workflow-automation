@@ -19,7 +19,10 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
-from config import OPENROUTER_API_KEY, GEMINI_API_KEY, LLM_MODEL, GEMINI_MODEL, ALLOWED_STEPS
+from config import (
+    OPENROUTER_API_KEY, GEMINI_API_KEY, LLM_MODEL, GEMINI_MODEL, ALLOWED_STEPS,
+    GROQ_API_KEY, GROQ_MODEL, HUGGINGFACE_API_KEY, HUGGINGFACE_MODEL
+)
 from prompts import (
     PARSE_INTENT_PROMPT, 
     ENTITY_EXTRACTION_PROMPT, 
@@ -133,62 +136,85 @@ def extract_json_from_response(text: str) -> dict:
         raise ValueError(f"Failed to parse JSON: {e}")
 
 
+# ─── LLM Provider URLs ───────────────────────────────────────────────
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+HUGGINGFACE_URL = "https://api-inference.huggingface.co/models"
+
+
 def call_llm(full_prompt: str) -> str:
     """
-    Call LLM to generate automation from natural language.
-    Tries Google Gemini first (primary), falls back to OpenRouter.
+    Call LLM with 4-provider cascade:
+    1. Google Gemini (primary)
+    2. OpenRouter (fallback)
+    3. Groq (free 30 RPM)
+    4. HuggingFace Inference (free)
     """
-    gemini_error = None
-    openrouter_error = None
-    
-    # Try Google Gemini FIRST
-    if GEMINI_API_KEY:
-        try:
-            logger.info("🤖 Using Google Gemini AI (Primary)")
-            result = call_gemini(full_prompt)
-            logger.info("✅ Gemini successfully generated response")
-            return result
-        except httpx.HTTPStatusError as e:
-            gemini_error = f"HTTP {e.response.status_code}: {e.response.text[:200]}"
-            if e.response.status_code == 429:
-                logger.warning(f"⚠️ Gemini rate limited (429), trying OpenRouter...")
-            else:
-                logger.warning(f"⚠️ Gemini failed: {gemini_error}")
-        except Exception as e:
-            gemini_error = str(e)
-            logger.warning(f"⚠️ Gemini failed: {gemini_error}, trying OpenRouter fallback...")
-    else:
-        gemini_error = "GEMINI_API_KEY not set"
-        logger.info("Gemini API key not configured, skipping Gemini.")
-        
-    # Fallback to OpenRouter if Gemini fails or not configured
-    if OPENROUTER_API_KEY:
-        try:
-            logger.info("🔄 Using OpenRouter (Fallback)")
-            result = call_openrouter(full_prompt)
-            logger.info("✅ OpenRouter successfully generated response")
-            return result
-        except httpx.HTTPStatusError as e:
-            openrouter_error = f"HTTP {e.response.status_code}: {e.response.text[:200]}"
-            if e.response.status_code == 429:
-                logger.error(f"❌ OpenRouter also rate limited (429)")
-            else:
-                logger.error(f"❌ OpenRouter failed: {openrouter_error}")
-        except Exception as e:
-            openrouter_error = str(e)
-            logger.error(f"❌ Both LLM providers failed - Gemini: {gemini_error}, OpenRouter: {openrouter_error}")
-    else:
-        openrouter_error = "OPENROUTER_API_KEY not set"
-        logger.error("❌ OpenRouter API key not configured.")
+    providers = []
+    errors = {}
 
-    # Build informative error message
-    is_rate_limited = "429" in str(gemini_error or "") and "429" in str(openrouter_error or "")
-    if is_rate_limited:
-        detail = "Both AI providers are rate limited (429). Please wait a minute and try again, or update your API keys."
+    # Build ordered provider list (only if API key is configured)
+    if GEMINI_API_KEY:
+        providers.append(("Gemini", call_gemini, "🤖"))
     else:
-        detail = f"AI service temporarily unavailable. Gemini: {gemini_error}, OpenRouter: {openrouter_error}"
-    
-    raise HTTPException(status_code=503 if is_rate_limited else 500, detail=detail)
+        errors["Gemini"] = "API key not set"
+
+    if OPENROUTER_API_KEY:
+        providers.append(("OpenRouter", call_openrouter, "🔄"))
+    else:
+        errors["OpenRouter"] = "API key not set"
+
+    if GROQ_API_KEY:
+        providers.append(("Groq", call_groq, "⚡"))
+    else:
+        errors["Groq"] = "API key not set"
+
+    if HUGGINGFACE_API_KEY:
+        providers.append(("HuggingFace", call_huggingface, "🤗"))
+    else:
+        errors["HuggingFace"] = "API key not set"
+
+    if not providers:
+        raise HTTPException(
+            status_code=500,
+            detail="No AI provider API keys configured. Set at least one of: GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, HUGGINGFACE_API_KEY"
+        )
+
+    # Try each provider in order
+    for i, (name, call_fn, icon) in enumerate(providers):
+        try:
+            label = "Primary" if i == 0 else f"Fallback #{i}"
+            logger.info(f"{icon} Using {name} ({label})")
+            result = call_fn(full_prompt)
+            logger.info(f"✅ {name} successfully generated response")
+            return result
+        except httpx.HTTPStatusError as e:
+            error_msg = f"HTTP {e.response.status_code}: {e.response.text[:200]}"
+            errors[name] = error_msg
+            if e.response.status_code == 429:
+                logger.warning(f"⚠️ {name} rate limited (429), trying next provider...")
+            else:
+                logger.warning(f"⚠️ {name} failed: {error_msg}")
+        except Exception as e:
+            errors[name] = str(e)
+            logger.warning(f"⚠️ {name} failed: {e}, trying next provider...")
+
+    # All providers failed
+    rate_limited_count = sum(1 for err in errors.values() if "429" in str(err))
+    configured_count = len(providers)
+
+    if rate_limited_count >= configured_count and configured_count > 0:
+        detail = (
+            f"All {configured_count} AI providers are rate limited (429). "
+            "Please wait a minute and try again. "
+            "Tip: Add more free API keys (GROQ_API_KEY, HUGGINGFACE_API_KEY) for extra fallbacks."
+        )
+        raise HTTPException(status_code=503, detail=detail)
+    else:
+        error_summary = ", ".join(f"{k}: {v}" for k, v in errors.items())
+        raise HTTPException(
+            status_code=500,
+            detail=f"All AI providers failed. {error_summary}"
+        )
 
 
 def call_openrouter(full_prompt: str) -> str:
@@ -199,14 +225,14 @@ def call_openrouter(full_prompt: str) -> str:
         "HTTP-Referer": "http://localhost:3000",
         "X-Title": "Smart Workflow Automation"
     }
-    
+
     payload = {
         "model": LLM_MODEL,
         "messages": [
             {"role": "user", "content": full_prompt}
         ]
     }
-    
+
     with httpx.Client(timeout=60.0) as client:
         response = client.post(OPENROUTER_URL, headers=headers, json=payload)
         response.raise_for_status()
@@ -216,25 +242,77 @@ def call_openrouter(full_prompt: str) -> str:
 
 def call_gemini(full_prompt: str) -> str:
     """Call Google Gemini API"""
-    from config import GEMINI_API_KEY, GEMINI_MODEL
-    
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-    
+
     headers = {
         "Content-Type": "application/json"
     }
-    
+
     payload = {
         "contents": [{
             "parts": [{"text": full_prompt}]
         }]
     }
-    
+
     with httpx.Client(timeout=60.0) as client:
         response = client.post(url, headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
         return result["candidates"][0]["content"]["parts"][0]["text"]
+
+
+def call_groq(full_prompt: str) -> str:
+    """
+    Call Groq API (free tier: 30 RPM, 14,400 requests/day).
+    Uses OpenAI-compatible chat completions endpoint.
+    """
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "user", "content": full_prompt}
+        ],
+        "temperature": 0.7,
+        "max_tokens": 4096
+    }
+
+    with httpx.Client(timeout=60.0) as client:
+        response = client.post(GROQ_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"]
+
+
+def call_huggingface(full_prompt: str) -> str:
+    """
+    Call HuggingFace Inference API (free tier).
+    Uses the serverless inference endpoint.
+    """
+    url = f"{HUGGINGFACE_URL}/{HUGGINGFACE_MODEL}/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {HUGGINGFACE_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": HUGGINGFACE_MODEL,
+        "messages": [
+            {"role": "user", "content": full_prompt}
+        ],
+        "max_tokens": 4096,
+        "stream": False
+    }
+
+    with httpx.Client(timeout=90.0) as client:
+        response = client.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"]
 
 
 # ============================================================
@@ -416,15 +494,22 @@ def build_automation_from_context(context: dict) -> dict:
 @app.get("/health")
 async def health_check():
     """Service health check endpoint"""
+    configured_providers = []
+    if GEMINI_API_KEY: configured_providers.append("gemini")
+    if OPENROUTER_API_KEY: configured_providers.append("openrouter")
+    if GROQ_API_KEY: configured_providers.append("groq")
+    if HUGGINGFACE_API_KEY: configured_providers.append("huggingface")
+
     return {
         "status": "python service ready",
         "timestamp": datetime.now().isoformat(),
-        "version": "2.0.0",
-        "llm_provider": "gemini + openrouter",
-        "llm_configured": bool(GEMINI_API_KEY or OPENROUTER_API_KEY),
-        "model": GEMINI_MODEL if GEMINI_API_KEY else LLM_MODEL,
+        "version": "2.1.0",
+        "llm_providers": configured_providers,
+        "llm_provider_count": len(configured_providers),
+        "llm_configured": len(configured_providers) > 0,
+        "primary_model": GEMINI_MODEL if GEMINI_API_KEY else (GROQ_MODEL if GROQ_API_KEY else LLM_MODEL),
         "allowed_steps": get_allowed_tool_names(),
-        "features": ["clarification", "voice_mode", "multi_turn", "auto_retry", "registry_aware"]
+        "features": ["clarification", "voice_mode", "multi_turn", "auto_retry", "registry_aware", "multi_provider_fallback"]
     }
 
 
