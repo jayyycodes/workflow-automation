@@ -70,7 +70,7 @@ class WorkflowValidator {
     static validateTrigger(trigger) {
         const errors = [];
         const warnings = [];
-        const ALLOWED_TRIGGERS = ['manual', 'interval', 'webhook', 'event'];
+        const ALLOWED_TRIGGERS = ['manual', 'interval', 'daily', 'webhook', 'rss', 'event'];
 
         if (!trigger.type) {
             errors.push("Trigger missing 'type' field");
@@ -157,7 +157,8 @@ class WorkflowValidator {
         const dataProducerTypes = [
             'fetch_stock_price', 'fetch_crypto_price', 'fetch_weather', 'fetch_data',
             'scrape_github', 'scrape_hackernews', 'scrape_reddit', 'scrape_screener',
-            'scrape_groww', 'scrape_hack2skill', 'scrape_twitter', 'job_search', 'fetch_url'
+            'scrape_groww', 'scrape_hack2skill', 'scrape_twitter', 'job_search', 'fetch_url',
+            'http_request', 'fetch_rss_feed'
         ];
         const dataConsumerTypes = [
             'send_email', 'send_whatsapp', 'send_sms', 'send_notification',

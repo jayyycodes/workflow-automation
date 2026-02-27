@@ -103,6 +103,12 @@ class ConversationRequest(BaseModel):
     context: Optional[dict] = None
 
 
+class GenerateRequest(BaseModel):
+    """Request model for generic generation"""
+    prompt: str
+    user_request: Optional[str] = None
+
+
 class IntentResponse(BaseModel):
     """Response model for parsed intent"""
     intent: str
@@ -144,25 +150,15 @@ HUGGINGFACE_URL = "https://api-inference.huggingface.co/models"
 def call_llm(full_prompt: str) -> str:
     """
     Call LLM with 4-provider cascade:
-    1. Google Gemini (primary)
-    2. OpenRouter (fallback)
-    3. Groq (free 30 RPM)
-    4. HuggingFace Inference (free)
+    1. Groq (primary — fast & free)
+    2. HuggingFace Inference (free)
+    3. OpenRouter (fallback)
+    4. Google Gemini (last resort)
     """
     providers = []
     errors = {}
 
     # Build ordered provider list (only if API key is configured)
-    if GEMINI_API_KEY:
-        providers.append(("Gemini", call_gemini, "🤖"))
-    else:
-        errors["Gemini"] = "API key not set"
-
-    if OPENROUTER_API_KEY:
-        providers.append(("OpenRouter", call_openrouter, "🔄"))
-    else:
-        errors["OpenRouter"] = "API key not set"
-
     if GROQ_API_KEY:
         providers.append(("Groq", call_groq, "⚡"))
     else:
@@ -172,6 +168,16 @@ def call_llm(full_prompt: str) -> str:
         providers.append(("HuggingFace", call_huggingface, "🤗"))
     else:
         errors["HuggingFace"] = "API key not set"
+
+    if OPENROUTER_API_KEY:
+        providers.append(("OpenRouter", call_openrouter, "🔄"))
+    else:
+        errors["OpenRouter"] = "API key not set"
+
+    if GEMINI_API_KEY:
+        providers.append(("Gemini", call_gemini, "�"))
+    else:
+        errors["Gemini"] = "API key not set"
 
     if not providers:
         raise HTTPException(
@@ -664,6 +670,32 @@ async def generate_automation(request: TextRequest):
             "attempts": result["attempts"],
             "attempt_details": result["attempt_details"]
         }
+
+
+# ============================================================
+# Generic Generation (Summarization, Research, etc.)
+# ============================================================
+
+@app.post("/generate")
+async def generate_text(request: GenerateRequest):
+    """
+    Generic text generation endpoint.
+    Used for summarization, expanding content, etc.
+    """
+    try:
+        # Prefer the full detailed prompt if provided
+        full_prompt = request.user_request if request.user_request else request.prompt
+        
+        logger.info(f"📝 Generative request (len={len(full_prompt)})")
+        context_response = call_llm(full_prompt)
+        
+        return {
+            "success": True,
+            "result": context_response
+        }
+    except Exception as e:
+        logger.error(f"❌ Generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================

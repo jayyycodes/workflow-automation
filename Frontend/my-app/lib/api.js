@@ -95,6 +95,15 @@ class APIClient {
         this.clearToken();
     }
 
+    // Google OAuth helpers
+    async getGoogleLoginUrl() {
+        return this.request('/auth/google/login');
+    }
+
+    async getGoogleConnectionStatus() {
+        return this.request('/auth/google/status');
+    }
+
     // Automation endpoints
     async getAutomations() {
         return this.request('/automations');

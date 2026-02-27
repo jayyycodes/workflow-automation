@@ -88,6 +88,69 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// ─── Variable Resolution ─────────────────────────────────────────────
+
+function resolveVariables(data, context) {
+    if (typeof data === 'string') {
+        // Check for full replacement (preserving type)
+        // Matches {{variable}} exactly (no extra text)
+        const fullMatch = data.match(/^\s*{{\s*([\w.]+)\s*}}\s*$/);
+        if (fullMatch) {
+            const path = fullMatch[1];
+            const value = getPathValue(path, context);
+            return value !== undefined ? value : data;
+        }
+
+        // Check for partial replacement (string interpolation)
+        // Matches "Start {{variable}} End"
+        return data.replace(/{{\s*([\w.]+)\s*}}/g, (match, path) => {
+            const value = getPathValue(path, context);
+            if (value === undefined) return match;
+            // JSON.stringify objects/arrays to avoid [object Object]
+            if (typeof value === 'object' && value !== null) {
+                try { return JSON.stringify(value); } catch { return String(value); }
+            }
+            return String(value);
+        });
+    }
+
+    if (Array.isArray(data)) {
+        return data.map(item => resolveVariables(item, context));
+    }
+
+    if (typeof data === 'object' && data !== null) {
+        const resolved = {};
+        for (const [key, value] of Object.entries(data)) {
+            resolved[key] = resolveVariables(value, context);
+        }
+        return resolved;
+    }
+
+    return data;
+}
+
+function getPathValue(path, context) {
+    const parts = path.split('.');
+
+    // 1. Try stepOutputs shortcuts (e.g. "step_1" -> context.stepOutputs.step_1)
+    if (context.stepOutputs && context.stepOutputs[parts[0]]) {
+        let current = context.stepOutputs[parts[0]];
+        for (let i = 1; i < parts.length; i++) {
+            if (current == null) return undefined;
+            current = current[parts[i]];
+        }
+        return current;
+    }
+
+    // 2. Try direct context access (e.g. "user.email", "trigger.type")
+    let current = context;
+    for (const part of parts) {
+        if (current == null) return undefined;
+        current = current[part];
+    }
+    return current;
+}
+
 // ─── Step Execution with Retry ─────────────────────────────────────────
 
 /**
@@ -113,7 +176,11 @@ async function executeStepWithRetry(step, context, stepNumber, executionId) {
         const stepStartTime = Date.now();
 
         try {
-            const output = await handler(step, context);
+            // Resolve variables in step properties (params, etc.)
+            // We clone input step to avoid mutating the original definition
+            const resolvedStep = resolveVariables(step, context);
+
+            const output = await handler(resolvedStep, context);
             const duration_ms = Date.now() - stepStartTime;
 
             if (retries > 0) {
@@ -209,6 +276,25 @@ export const executeWorkflow = async (automation, executionId, user = null) => {
 
     // Initialize context memory
     const memory = new ContextMemory(executionId, automation.id, user);
+
+    // Inject trigger-specific data into ContextMemory
+    // Webhook payloads (set by webhooks.js route)
+    if (automation._webhookPayload) {
+        memory.set('webhookPayload', automation._webhookPayload);
+        memory.set('triggerType', 'webhook');
+        logger.debug('Injected webhook payload into ContextMemory', { executionId });
+    }
+
+    // RSS feed data (set by rssPoller.js)
+    if (automation._rssData) {
+        memory.set('rssFeed', automation._rssData.feed);
+        memory.set('rssNewItems', automation._rssData.newItems);
+        memory.set('triggerType', 'rss');
+        logger.debug('Injected RSS data into ContextMemory', {
+            executionId,
+            newItems: automation._rssData.newItems?.length
+        });
+    }
 
     logger.info('Starting workflow execution', {
         executionId,

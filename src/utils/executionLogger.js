@@ -19,8 +19,19 @@ import logger from './logger.js';
 function sanitizeForFirestore(obj) {
     if (obj === null || obj === undefined) return null;
     if (typeof obj !== 'object') return obj;
-    if (Array.isArray(obj)) return obj.map(sanitizeForFirestore);
 
+    // Handle Arrays
+    if (Array.isArray(obj)) {
+        // Check for nested arrays (Firestore doesn't support them)
+        const hasNestedArray = obj.some(item => Array.isArray(item));
+        if (hasNestedArray) {
+            // Stringify the whole array if it contains nested arrays
+            return JSON.stringify(obj);
+        }
+        return obj.map(sanitizeForFirestore);
+    }
+
+    // Handle Objects
     const cleaned = {};
     for (const [key, value] of Object.entries(obj)) {
         if (value !== undefined) {
@@ -163,6 +174,7 @@ export class ContextMemory {
             executionId: this.executionId,
             automationId: this.automationId,
             user: this.user,
+            userId: this.user?.id || null,
             startTime: this.startTime.toISOString(),
             stepOutputs: { ...this.stepOutputs }
         };

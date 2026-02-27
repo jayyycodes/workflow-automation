@@ -115,6 +115,22 @@ export const triggerToCron = (trigger) => {
             // Manual triggers don't have cron
             return { valid: true, cron: null, error: null };
 
+        case 'webhook':
+            // Webhook triggers are event-driven, no cron needed
+            return { valid: true, cron: null, error: null };
+
+        case 'rss': {
+            // RSS triggers use their own polling interval (handled by rssPoller)
+            // Parse the interval for validation, but actual scheduling is done by rssPoller
+            const interval = trigger.interval || '15m';
+            const cronExpr = parseIntervalToCron(interval);
+            if (!cronExpr) {
+                return { valid: false, cron: null, error: `Invalid RSS poll interval: ${interval}` };
+            }
+            logger.debug('Parsed RSS trigger', { interval, cron: cronExpr });
+            return { valid: true, cron: cronExpr, error: null };
+        }
+
         default:
             return { valid: false, cron: null, error: `Unsupported trigger type: ${type}` };
     }

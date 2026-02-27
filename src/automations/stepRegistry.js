@@ -16,6 +16,13 @@ import smsService from '../integrations/sms/smsService.js';
 import webScraper from '../integrations/web/webScraperService.js';
 import discordService from '../integrations/messaging/discordService.js';
 import slackService from '../integrations/messaging/slackService.js';
+import { httpRequest } from '../integrations/http/httpRequestHandler.js';
+import { aiSummarize } from '../integrations/ai/aiSummarizeHandler.js';
+import { fetchRssFeed } from '../integrations/rss/rssFeedHandler.js';
+import { readGoogleSheet, writeGoogleSheet, appendGoogleSheet } from '../integrations/sheets/googleSheetsHandler.js';
+import { sendGmail } from '../integrations/gmail/gmailHandler.js';
+import { uploadToDrive, listDriveFiles } from '../integrations/drive/googleDriveHandler.js';
+import { createCalendarEvent, listCalendarEvents } from '../integrations/calendar/googleCalendarHandler.js';
 
 /**
  * Generic Notify Handler
@@ -47,7 +54,23 @@ const formatPhoneNumber = (phone) => {
 };
 
 const notify = async (params, context) => {
-    const { channel, message, to, subject, body } = params;
+    const { channel, to, subject } = params;
+    let { message, body } = params;
+
+    // Auto-stringify object messages/bodies (e.g. generic HTTP responses)
+    [message, body].forEach((val, i) => {
+        if (typeof val === 'object' && val !== null) {
+            try {
+                const str = JSON.stringify(val, null, 2);
+                if (i === 0) message = str;
+                else body = str;
+            } catch (e) {
+                const str = String(val);
+                if (i === 0) message = str;
+                else body = str;
+            }
+        }
+    });
 
     switch (channel) {
         case 'email':
@@ -108,7 +131,14 @@ const notify = async (params, context) => {
             return await slackService.sendMessage(params.webhook_url, message, params.options || {});
 
         default:
-            throw new Error(`Unsupported notification channel: ${channel}`);
+            // Default to console notification if no channel specified
+            logger.info(`[NOTIFICATION] ${message}`);
+            return {
+                sent: true,
+                channel: channel || 'notification',
+                message,
+                timestamp: new Date().toISOString()
+            };
     }
 };
 
@@ -767,6 +797,31 @@ const stepRegistry = {
     fetch_url: fetchUrl,
     condition: condition,
     delay: delay,
+
+    // HTTP request tool
+    http_request: httpRequest,
+
+    // AI tools
+    ai_summarize: aiSummarize,
+
+    // RSS feed tool
+    fetch_rss_feed: fetchRssFeed,
+
+    // Google Sheets tools
+    read_google_sheet: readGoogleSheet,
+    write_google_sheet: writeGoogleSheet,
+    append_google_sheet: appendGoogleSheet,
+
+    // Gmail (per-user OAuth)
+    send_gmail: sendGmail,
+
+    // Google Drive (per-user OAuth)
+    upload_to_drive: uploadToDrive,
+    list_drive_files: listDriveFiles,
+
+    // Google Calendar (per-user OAuth)
+    create_calendar_event: createCalendarEvent,
+    list_calendar_events: listCalendarEvents,
 
     // Alias for placeholder step type
     placeholder: async (params) => {

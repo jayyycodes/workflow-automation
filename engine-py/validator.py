@@ -102,6 +102,11 @@ def validate_trigger(trigger: dict) -> Tuple[bool, Optional[str]]:
         if not validate_interval_format(trigger["every"]):
             return False, f"Invalid interval format: '{trigger['every']}'. Use format like: 2m, 30s, 1h, 2d, 1w (number + unit)"
     
+    # RSS trigger must have 'url' field
+    if trigger["type"] == "rss":
+        if "url" not in trigger:
+            return False, "RSS trigger missing 'url' field (the RSS feed URL to poll)"
+    
     return True, None
 
 
@@ -175,6 +180,24 @@ def validate_step(step: dict, allowed_steps: list = None) -> Tuple[bool, Optiona
     elif step_type == "scrape_twitter":
         if "username" not in step:
             return False, "scrape_twitter requires 'username'"
+    
+    elif step_type == "http_request":
+        if "url" not in step:
+            return False, "http_request requires 'url'"
+    
+    elif step_type == "fetch_rss_feed":
+        if "url" not in step:
+            return False, "fetch_rss_feed requires 'url'"
+    
+    elif step_type == "ai_summarize":
+        if "text" not in step:
+            return False, "ai_summarize requires 'text'"
+    
+    elif step_type in ("read_google_sheet", "write_google_sheet", "append_google_sheet"):
+        if "spreadsheetId" not in step:
+            return False, f"{step_type} requires 'spreadsheetId'"
+        if "range" not in step:
+            return False, f"{step_type} requires 'range'"
     
     return True, None
 

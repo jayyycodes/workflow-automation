@@ -11,6 +11,7 @@ import cron from 'node-cron';
 import { db } from '../config/firebase.js';
 import { executeWorkflow } from '../automations/workflowExecutor.js';
 import { triggerToCron, isSchedulable } from './triggerParser.js';
+import { scheduleRssPoller, unscheduleRssPoller, stopAllRssPollers, getRssPollerStats } from './rssPoller.js';
 import { AUTOMATION_STATUS } from '../utils/constants.js';
 import logger from '../utils/logger.js';
 
@@ -34,6 +35,17 @@ export const scheduleAutomation = (automation) => {
     // Check if schedulable
     if (!isSchedulable(trigger)) {
         logger.debug('Automation has manual trigger, not scheduling', { automationId });
+        return false;
+    }
+
+    // Route RSS triggers to RSS poller
+    if (trigger.type === 'rss') {
+        return scheduleRssPoller(automation);
+    }
+
+    // Webhook triggers are event-driven, no scheduling needed
+    if (trigger.type === 'webhook') {
+        logger.debug('Webhook trigger — no scheduling needed', { automationId });
         return false;
     }
 
@@ -82,6 +94,8 @@ export const unscheduleAutomation = (automationId) => {
         cronJobs.delete(automationId);
         logger.info('🛑 Automation unscheduled', { automationId });
     }
+    // Also unschedule from RSS poller if applicable
+    unscheduleRssPoller(automationId);
 };
 
 /**
@@ -201,9 +215,13 @@ export const handleStatusChange = async (automation, newStatus) => {
  * Get scheduler statistics
  */
 export const getSchedulerStats = () => {
+    const rssStats = getRssPollerStats();
     return {
-        totalJobs: cronJobs.size,
-        activeJobs: Array.from(cronJobs.keys())
+        totalJobs: cronJobs.size + rssStats.activePollers,
+        cronJobs: cronJobs.size,
+        rssPollers: rssStats.activePollers,
+        activeJobs: Array.from(cronJobs.keys()),
+        activeRssPollers: rssStats.pollerIds
     };
 };
 
@@ -218,8 +236,13 @@ export const stopAll = () => {
         logger.debug('Stopped job', { automationId });
     }
 
+    const cronCount = cronJobs.size;
     cronJobs.clear();
-    logger.info(`Stopped ${cronJobs.size} scheduled jobs`);
+
+    // Also stop RSS pollers
+    const rssCount = stopAllRssPollers();
+
+    logger.info(`Stopped ${cronCount} cron jobs and ${rssCount} RSS pollers`);
 };
 
 export default {

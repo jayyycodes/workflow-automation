@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 
 const AuthContext = createContext({});
@@ -12,8 +12,27 @@ export function AuthProvider({ children }) {
     const router = useRouter();
 
     useEffect(() => {
+        handleGoogleCallback();
         checkAuth();
     }, []);
+
+    /**
+     * Handle Google OAuth callback — extracts JWT from URL params
+     * when redirected from /auth/google/callback
+     */
+    const handleGoogleCallback = () => {
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const isGoogle = params.get('google');
+
+        if (token && isGoogle) {
+            api.setToken(token);
+            // Clean up URL params without navigation
+            window.history.replaceState({}, '', window.location.pathname);
+            console.log('✅ [AUTH] Google OAuth token received');
+        }
+    };
 
     const checkAuth = async () => {
         console.log('🔍 [AUTH] Starting auth check...');
@@ -32,8 +51,6 @@ export function AuthProvider({ children }) {
         } catch (error) {
             console.error('❌ [AUTH] Auth check failed:', error);
             console.error('❌ [AUTH] Error details:', error.message);
-            // DON'T clear token - let user try again
-            // api.clearToken();
         } finally {
             setLoading(false);
             console.log('🔍 [AUTH] Auth check complete. Loading:', false);
@@ -44,6 +61,18 @@ export function AuthProvider({ children }) {
         const data = await api.login(email, password);
         setUser(data.user);
         return data;
+    };
+
+    const loginWithGoogle = async () => {
+        try {
+            const data = await api.getGoogleLoginUrl();
+            if (data.url) {
+                window.location.href = data.url;
+            }
+        } catch (error) {
+            console.error('❌ [AUTH] Google login failed:', error);
+            throw error;
+        }
     };
 
     const register = async (name, email, password, whatsappNumber) => {
@@ -63,6 +92,7 @@ export function AuthProvider({ children }) {
             user,
             loading,
             login,
+            loginWithGoogle,
             register,
             logout,
             isAuthenticated: !!user
@@ -79,3 +109,4 @@ export function useAuth() {
     }
     return context;
 }
+

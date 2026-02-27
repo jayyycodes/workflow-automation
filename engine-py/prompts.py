@@ -84,102 +84,143 @@ def build_generation_prompt(user_request: str, tool_prompt_text: str = None) -> 
     """
     Build the automation generation prompt with dynamic tool injection.
     This replaces the old static GENERATE_AUTOMATION_PROMPT.
+    
+    Key design:
+    - Tool registry definitions are injected dynamically via fetch_registry()
+    - Strict JSON-only output enforcement
+    - ContextMemory chaining instructions for cross-step data flow
+    - Uses only interval triggers (1d for daily) — no 'daily' trigger type
     """
     if tool_prompt_text is None:
         tool_prompt_text = get_tool_prompt_text()
     
     return f"""You are an automation planner. Convert user instructions into a structured automation JSON.
 
+Return ONLY valid JSON. No markdown, no explanation, no code blocks, no preamble.
+
 CRITICAL RULES:
-1. Output ONLY a valid JSON object — NO markdown, NO code blocks, NO explanations
-2. Use ONLY the step types listed below — NEVER invent new ones
-3. If unsure about a parameter value, use null instead of inventing values
-4. Every automation MUST have at least one notification step
+1. Return ONLY a raw JSON object — ANY non-JSON text will cause a failure
+2. Use ONLY tools listed in the TOOL REGISTRY below — do NOT invent new tool types
+3. If unsure about a parameter value, use a sensible placeholder or null
+4. Every automation MUST have at least one notification or output step (send_email, notify, append_google_sheet, etc.)
+5. NEVER use a tool type that is not in the TOOL REGISTRY
 
 OUTPUT SCHEMA:
 {{
-  "name": "string",
-  "description": "string",
+  "name": "string — short descriptive name",
+  "description": "string — what this automation does",
   "trigger": {{
-    "type": "manual|interval",
-    "every": "interval string (only if type is interval)"
+    "type": "manual | interval | webhook | rss",
+    "every": "interval string like 5m, 1h, 1d (ONLY if type is interval)",
+    "url": "RSS feed URL (ONLY if type is rss)",
+    "interval": "RSS polling interval like 15m (ONLY if type is rss)"
   }},
   "steps": [
     {{
-      "type": "step_type_from_list_below",
-      ...step-specific fields
+      "type": "tool_name_from_registry",
+      ...tool-specific parameters from registry
     }}
   ]
 }}
 
-AVAILABLE TOOLS (from registry):
+══════════════════════════════════════════════════
+  TOOL REGISTRY (single source of truth)
+══════════════════════════════════════════════════
+The following tools are dynamically loaded from the MCP-compatible tool registry.
+Each entry shows: tool name, description, and parameters.
+Use ONLY these tools. Do NOT invent tools not listed here.
+
 {tool_prompt_text}
 
-ALLOWED TRIGGER TYPES:
-{ALLOWED_TRIGGERS}
+══════════════════════════════════════════════════
+  TRIGGER TYPES
+══════════════════════════════════════════════════
+- manual    — run once on demand (default if no schedule mentioned)
+- interval  — repeating schedule. Use "every" field: 5m, 1h, 1d, 1w
+              For "daily" requests, use: {{"type": "interval", "every": "1d"}}
+              For "every morning" or "every day", use: {{"type": "interval", "every": "1d"}}
+- webhook   — triggered by external HTTP POST to the automation's webhook URL
+              Use when user says "triggered by webhook", "on webhook", "when webhook received"
+- rss       — polls an RSS feed at an interval. Requires "url" and "interval" fields
+              Use when user mentions RSS feeds, subscribing to feeds, or monitoring articles
 
-VALID INTERVAL FORMAT:
-- Format: <number><unit> where unit = s (seconds), m (minutes), h (hours), d (days), w (weeks)
-- Examples: 30s, 1m, 2m, 5m, 1h, 2d, 1w
+INTERVAL FORMAT: <number><unit> where unit = s|m|h|d|w
+Examples: 30s, 1m, 5m, 1h, 2d, 1w
 
-STEP CONFIGURATIONS:
-- fetch_stock_price: {{"type": "fetch_stock_price", "symbol": "AAPL"}}
-- fetch_crypto_price: {{"type": "fetch_crypto_price", "symbol": "BTC"}}
-- fetch_weather: {{"type": "fetch_weather", "location": "user's city name"}} **Always ask user for their city, never use "current"**
-- scrape_github: {{"type": "scrape_github", "username": "github_user", "repo_type": "stars|repos|activity"}}
-- scrape_hackernews: {{"type": "scrape_hackernews", "story_type": "top|best|new", "count": 10}}
-- scrape_reddit: {{"type": "scrape_reddit", "subreddit": "programming", "sort": "hot", "limit": 10, "keyword": "AI"}}
-- format_web_digest: {{"type": "format_web_digest", "provider": "github|hackernews|reddit"}}
-- send_notification: {{"type": "send_notification", "message": "..."}}
-- send_email: {{"type": "send_email", "to": "user@example.com", "subject": "...", "body": "..."}}
-- send_whatsapp: {{"type": "send_whatsapp", "to": "+1234567890", "message": "..."}}
-- send_sms: {{"type": "send_sms", "to": "+1234567890", "message": "..."}}
-- scrape_screener: {{"type": "scrape_screener", "symbol": "HCLTECH"}}
-- scrape_groww: {{"type": "scrape_groww", "url": "https://groww.in/gold-rates"}}
-- scrape_hack2skill: {{"type": "scrape_hack2skill", "url": "https://hack2skill.com/", "limit": 5}}
-- scrape_twitter: {{"type": "scrape_twitter", "username": "handle", "limit": 5}}
-- send_discord: {{"type": "send_discord", "webhook_url": "...", "message": "..."}}
-- send_slack: {{"type": "send_slack", "webhook_url": "...", "message": "..."}}
+══════════════════════════════════════════════════
+  CONTEXT MEMORY & STEP CHAINING
+══════════════════════════════════════════════════
+Steps can reference output from previous steps using double-curly-brace variables.
+The executor stores each step's output as step_1, step_2, etc.
 
-NOTIFICATION PLACEHOLDER VALUES:
-- Email: "user@example.com" (backend auto-replaces with user's email)
-- WhatsApp/SMS: "+1234567890" (backend auto-replaces with user's phone)
+Syntax: {{{{step_N.field}}}} where N = 1-based step index
 
-NOTIFICATION CHANNEL KEYWORDS:
-- Email: "email", "mail" → use send_email
-- WhatsApp: "whatsapp", "wa" → use send_whatsapp
-- SMS: "sms", "text", "text me" → use send_sms
-- Discord: "discord" → use send_discord
-- Slack: "slack" → use send_slack
-- Default (no channel specified): use send_email
+Chaining examples:
+- Reference RSS items from step 1:        {{{{step_1.items}}}}
+- Reference AI summary from step 2:       {{{{step_2.summary}}}}
+- Reference HTTP response data:           {{{{step_1.data}}}}
+- Reference stock price:                  {{{{step_1.price}}}}
+- Reference weather temperature:          {{{{step_1.temperature}}}}
+- Access nested fields:                   {{{{step_1.data.rates.USD}}}}
 
-WEB SCRAPING WORKFLOW PATTERN (ALWAYS 3 steps):
-1. scrape_[provider] (github/hackernews/reddit/screener/groww/hack2skill/twitter)
-2. format_web_digest (provider: matching provider name) **REQUIRED!**
-3. send notification (email/sms/discord/slack)
-Without format_web_digest, the notification body will be empty!
+Common output fields per tool:
+- fetch_stock_price  → price, symbol, change, percentChange
+- fetch_crypto_price → price, symbol, market_cap
+- fetch_weather      → temperature, description, humidity, location
+- fetch_rss_feed     → items (array), itemCount, title
+- http_request       → status, data, headers
+- ai_summarize       → summary, format, input_length
+- scrape_hackernews  → stories (array), count
 
-CONDITIONAL WORKFLOW PATTERN (ALWAYS 3 steps):
-1. Fetch data step
-2. {{"type": "condition", "if": "stockPrice < 150"}} (field is 'if', NOT 'condition')
-3. Notification step (executor skips this if condition is false)
+══════════════════════════════════════════════════
+  NOTIFICATION PLACEHOLDERS
+══════════════════════════════════════════════════
+- Email: use "user@example.com" (backend auto-replaces with user's real email)
+- WhatsApp/SMS: use "+1234567890" (backend auto-replaces with user's phone)
 
-EXAMPLE 1 (Stock Email):
+CHANNEL SELECTION:
+- "email", "mail"        → send_email
+- "whatsapp", "wa"       → send_whatsapp
+- "sms", "text me"       → send_sms
+- "discord"              → send_discord
+- "slack"                → send_slack
+- "notify", "notification" or unspecified → notify
+
+══════════════════════════════════════════════════
+  WORKFLOW PATTERNS
+══════════════════════════════════════════════════
+
+WEB SCRAPING (always 3 steps):
+1. scrape_[provider]  2. format_web_digest  3. notification
+Without format_web_digest the notification body will be empty!
+
+CONDITIONAL (always 3 steps):
+1. Fetch data  2. {{"type": "condition", "if": "price < 150"}}  3. notification
+
+RSS + SUMMARIZE + NOTIFY:
+1. fetch_rss_feed  2. ai_summarize (text: {{{{step_1.items}}}})  3. send_email/notify
+
+HTTP API + SHEETS:
+1. http_request  2. append_google_sheet (values reference {{{{step_1.data}}}})
+
+══════════════════════════════════════════════════
+  EXAMPLES
+══════════════════════════════════════════════════
+
+EXAMPLE 1 — Stock email:
 Input: "Send me AAPL stock price every 5 minutes"
-Output:
 {{
   "name": "AAPL Stock Price Monitor",
-  "description": "Fetch AAPL stock price every 5 minutes and send email notification",
+  "description": "Fetch AAPL stock price every 5 minutes and send email",
   "trigger": {{"type": "interval", "every": "5m"}},
   "steps": [
     {{"type": "fetch_stock_price", "symbol": "AAPL"}},
-    {{"type": "send_email", "to": "user@example.com", "subject": "AAPL Stock Update", "body": "Current AAPL price"}}
+    {{"type": "send_email", "to": "user@example.com", "subject": "AAPL Stock Update", "body": "Current AAPL price: {{{{step_1.price}}}}"}}
   ]
 }}
 
-EXAMPLE 2 (HackerNews Digest):
+EXAMPLE 2 — HackerNews digest:
 Input: "Email me top HackerNews stories every morning"
-Output:
 {{
   "name": "HackerNews Daily Digest",
   "description": "Top HackerNews stories delivered daily",
@@ -191,9 +232,8 @@ Output:
   ]
 }}
 
-EXAMPLE 3 (Conditional SMS):
+EXAMPLE 3 — Conditional SMS:
 Input: "Track Apple stock and SMS me if it drops below $150"
-Output:
 {{
   "name": "Apple Stock Alert",
   "description": "SMS notification when AAPL drops below $150",
@@ -205,8 +245,114 @@ Output:
   ]
 }}
 
+EXAMPLE 4 — RSS + AI summarize + email:
+Input: "Summarize new TechCrunch articles and email me"
+{{
+  "name": "TechCrunch RSS Digest",
+  "description": "Fetch TechCrunch RSS, summarize with AI, and email",
+  "trigger": {{"type": "rss", "url": "https://techcrunch.com/feed/", "interval": "30m"}},
+  "steps": [
+    {{"type": "fetch_rss_feed", "url": "https://techcrunch.com/feed/", "limit": 5}},
+    {{"type": "ai_summarize", "text": "{{{{step_1.items}}}}", "format": "bullets"}},
+    {{"type": "send_email", "to": "user@example.com", "subject": "TechCrunch Digest", "body": "{{{{step_2.summary}}}}"}}
+  ]
+}}
+
+EXAMPLE 5 — HTTP API + Google Sheet:
+Input: "Fetch exchange rates and log them to my Google Sheet"
+{{
+  "name": "Exchange Rate Logger",
+  "description": "Fetch exchange rates via API and append to Google Sheet",
+  "trigger": {{"type": "interval", "every": "1h"}},
+  "steps": [
+    {{"type": "http_request", "url": "https://api.exchangerate.host/latest", "method": "GET"}},
+    {{"type": "append_google_sheet", "spreadsheetId": "your_sheet_id", "range": "Sheet1!A1", "values": [["{{{{step_1.data.base}}}}", "{{{{step_1.data.rates.USD}}}}"]]}}
+  ]
+}}
+
+EXAMPLE 6 — Webhook trigger:
+Input: "Create automation triggered by webhook that sends a notification"
+{{
+  "name": "Webhook Notification",
+  "description": "Send a notification when a webhook is received",
+  "trigger": {{"type": "webhook"}},
+  "steps": [
+    {{"type": "notify", "message": "Webhook received with payload: {{{{webhookPayload}}}}"}}
+  ]
+}}
+
+EXAMPLE 7 — Weather + Google Sheet:
+Input: "Fetch weather daily and log results to Google Sheet"
+{{
+  "name": "Daily Weather Logger",
+  "description": "Fetch weather every day and append to Google Sheet",
+  "trigger": {{"type": "interval", "every": "1d"}},
+  "steps": [
+    {{"type": "fetch_weather", "location": "New York"}},
+    {{"type": "append_google_sheet", "spreadsheetId": "your_sheet_id", "range": "Sheet1!A1", "values": [["{{{{step_1.location}}}}", "{{{{step_1.temperature}}}}", "{{{{step_1.description}}}}"]]}}
+  ]
+}}
+
+EXAMPLE 8 — RSS + AI summarize + Google Sheet:
+Input: "Monitor AI news RSS, summarize updates, and save to Google Sheet"
+{{
+  "name": "AI News RSS to Sheet",
+  "description": "Monitor AI news RSS, summarize with AI, and log to Google Sheet",
+  "trigger": {{"type": "rss", "url": "https://news.ycombinator.com/rss", "interval": "30m"}},
+  "steps": [
+    {{"type": "fetch_rss_feed", "url": "https://news.ycombinator.com/rss", "limit": 10}},
+    {{"type": "ai_summarize", "text": "{{{{step_1.items}}}}", "format": "bullets"}},
+    {{"type": "append_google_sheet", "spreadsheetId": "your_sheet_id", "range": "Sheet1!A1", "values": [["{{{{step_2.summary}}}}", "{{{{step_1.itemCount}}}}"]]}}
+  ]
+}}
+
+EXAMPLE 9 — Gmail (send via user's own Gmail):
+Input: "Send me an email via Gmail about today's Bitcoin price"
+{{
+  "name": "Bitcoin Price Gmail",
+  "description": "Fetch BTC price and send via Gmail",
+  "trigger": {{"type": "manual"}},
+  "steps": [
+    {{"type": "fetch_crypto_price", "symbol": "BTC"}},
+    {{"type": "send_gmail", "to": "user@example.com", "subject": "Bitcoin Price Update", "body": "BTC is currently ${{{{step_1.price}}}} ({{{{step_1.changePercent}}}} 24h)"}}
+  ]
+}}
+
+EXAMPLE 10 — Google Calendar event:
+Input: "Create a meeting on my calendar for tomorrow at 3pm"
+{{
+  "name": "Create Calendar Event",
+  "description": "Create a Google Calendar event",
+  "trigger": {{"type": "manual"}},
+  "steps": [
+    {{"type": "create_calendar_event", "title": "Meeting", "startTime": "tomorrow 3:00 PM", "description": "Meeting created by SmartFlow"}}
+  ]
+}}
+
+EXAMPLE 11 — Google Drive upload:
+Input: "Fetch top Reddit posts and save them to my Google Drive"
+{{
+  "name": "Reddit to Drive",
+  "description": "Scrape Reddit and upload digest to Google Drive",
+  "trigger": {{"type": "interval", "every": "1d"}},
+  "steps": [
+    {{"type": "scrape_reddit", "subreddit": "technology", "sort": "hot", "limit": 10}},
+    {{"type": "ai_summarize", "text": "{{{{step_1.items}}}}", "format": "bullets"}},
+    {{"type": "upload_to_drive", "fileName": "reddit_digest.txt", "content": "{{{{step_2.summary}}}}"}}
+  ]
+}}
+
+GOOGLE TOOLS (require user's Google OAuth connection):
+- send_gmail: Send email via user's Gmail (preferred over send_email when user says "Gmail")
+- upload_to_drive: Upload a file to Google Drive
+- list_drive_files: List files in Google Drive
+- create_calendar_event: Create a Google Calendar event. IMPORTANT: for startTime, ALWAYS use the user's exact words as natural language (e.g. "tomorrow 10:00 AM", "today 3:00 PM", "next monday 9:00 AM"). NEVER convert to ISO 8601 or UTC. The backend handles timezone conversion.
+- list_calendar_events: List upcoming calendar events
+
+Now generate the automation JSON for this request:
 User request: {user_request}
-Output:"""
+
+Return ONLY valid JSON:"""
 
 
 # Keep old prompt for backward compatibility

@@ -4,6 +4,16 @@ import { AUTOMATION_STATUS } from '../utils/constants.js';
 import logger from '../utils/logger.js';
 
 /**
+ * Parse steps from Firestore — handles both JSON string (new) and array (legacy) formats
+ */
+function parseSteps(steps) {
+    if (typeof steps === 'string') {
+        try { return JSON.parse(steps); } catch { return []; }
+    }
+    return Array.isArray(steps) ? steps : [];
+}
+
+/**
  * Automation controller for CRUD and execution
  */
 const automationController = {
@@ -51,14 +61,18 @@ const automationController = {
                 name,
                 description: description || null,
                 trigger,
-                steps,
+                // Stringify steps to avoid Firestore nested array limitation
+                // (e.g. append_google_sheet values: [["a","b"]] would fail)
+                // The executor already handles JSON-stringified steps
+                steps: JSON.stringify(steps),
                 status: AUTOMATION_STATUS.DRAFT,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };
 
             const docRef = await db.collection('automations').add(newAutomation);
-            const automation = { id: docRef.id, ...newAutomation };
+            // Return parsed steps in API response for frontend display
+            const automation = { id: docRef.id, ...newAutomation, steps };
 
             logger.info('Automation created', {
                 automationId: automation.id,
@@ -169,7 +183,8 @@ const automationController = {
 
             const automations = [];
             snapshot.forEach(doc => {
-                automations.push({ id: doc.id, ...doc.data() });
+                const data = doc.data();
+                automations.push({ id: doc.id, ...data, steps: parseSteps(data.steps) });
             });
 
             // Sort by created_at desc
@@ -208,7 +223,7 @@ const automationController = {
             }
 
             const automationData = doc.data();
-            const automation = { id: doc.id, ...automationData };
+            const automation = { id: doc.id, ...automationData, steps: parseSteps(automationData.steps) };
 
             // Security: Check ownership
             if (automation.user_id !== userId) {
@@ -328,7 +343,7 @@ const automationController = {
                 });
             }
 
-            const automation = { id: doc.id, ...doc.data() };
+            const automation = { id: doc.id, ...doc.data(), steps: parseSteps(doc.data().steps) };
 
             // Security: Check ownership
             if (automation.user_id !== userId) {

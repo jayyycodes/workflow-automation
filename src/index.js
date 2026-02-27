@@ -17,6 +17,7 @@ import authRoutes from './routes/auth.js';
 import automationRoutes from './routes/automations.js';
 import userRoutes from './routes/user.js';
 import registryRoutes from './routes/registry.js';
+import webhookRoutes from './routes/webhooks.js';
 import mcpRoutes from './mcp/mcpRoutes.js';
 import './config/firebase.js'; // Ensure Firebase is initialized
 import { loadActiveAutomations, getSchedulerStats } from './scheduler/scheduler.js';
@@ -35,6 +36,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
+// Server restart verification
 app.use(express.json());
 
 // Health check endpoint
@@ -56,6 +58,7 @@ app.use('/auth', authRoutes);
 app.use('/automations', automationRoutes);
 app.use('/user', userRoutes);
 app.use('/registry', registryRoutes);
+app.use('/webhook', webhookRoutes);
 app.use('/mcp', mcpRoutes);
 
 // Error handling
@@ -74,6 +77,33 @@ const server = app.listen(PORT, async () => {
         logger.info('✅ Scheduler initialized with active automations');
     } catch (error) {
         logger.error('Failed to load active automations:', error);
+    }
+});
+
+// Handle port-in-use: kill stale process and retry once
+server.on('error', async (err) => {
+    if (err.code === 'EADDRINUSE') {
+        logger.warn(`⚠️ Port ${PORT} busy — killing stale process and retrying...`);
+        try {
+            const { execSync } = await import('child_process');
+            // Find and kill the process using the port (Windows)
+            const result = execSync(`netstat -ano | findstr :${PORT} | findstr LISTENING`, { encoding: 'utf8' });
+            const lines = result.trim().split('\n');
+            const pids = new Set(lines.map(l => l.trim().split(/\s+/).pop()).filter(Boolean));
+            for (const pid of pids) {
+                try { execSync(`taskkill /PID ${pid} /F`, { encoding: 'utf8' }); } catch { }
+            }
+            // Wait for port to free up, then retry
+            setTimeout(() => {
+                server.listen(PORT);
+            }, 1500);
+        } catch (killErr) {
+            logger.error(`Cannot free port ${PORT}. Kill the process manually and restart.`);
+            process.exit(1);
+        }
+    } else {
+        logger.error('Server error:', err);
+        process.exit(1);
     }
 });
 

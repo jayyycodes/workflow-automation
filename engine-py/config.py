@@ -65,14 +65,29 @@ ALLOWED_STEPS = [
     'job_search',
     'job_apply',
     'condition',
-    'delay'
+    'delay',
+    # New tools (v2)
+    'http_request',
+    'ai_summarize',
+    'fetch_rss_feed',
+    'read_google_sheet',
+    'write_google_sheet',
+    'append_google_sheet',
+    # Google OAuth tools (v3)
+    'send_gmail',
+    'upload_to_drive',
+    'list_drive_files',
+    'create_calendar_event',
+    'list_calendar_events'
 ]
 
 # Allowed trigger types
 ALLOWED_TRIGGERS = [
     "manual",
     "interval",
+    "daily",
     "webhook",
+    "rss",
     "event"
 ]
 

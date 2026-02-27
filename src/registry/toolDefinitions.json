@@ -816,6 +816,514 @@
                     }
                 }
             }
+        },
+        {
+            "name": "http_request",
+            "version": "1.0.0",
+            "description": "Make an HTTP request to any external API (GET, POST, PUT, DELETE, PATCH). Supports custom headers and body.",
+            "category": "data_fetch",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "method": {
+                        "type": "string",
+                        "description": "HTTP method: GET, POST, PUT, DELETE, PATCH, HEAD",
+                        "default": "GET"
+                    },
+                    "url": {
+                        "type": "string",
+                        "description": "Target URL to request"
+                    },
+                    "headers": {
+                        "type": "object",
+                        "description": "Custom HTTP headers (optional)"
+                    },
+                    "body": {
+                        "type": "object",
+                        "description": "Request body for POST/PUT/PATCH (optional)"
+                    }
+                },
+                "required": [
+                    "url"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "integer"
+                    },
+                    "statusText": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "type": "object"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "method": {
+                        "type": "string"
+                    },
+                    "duration_ms": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        {
+            "name": "ai_summarize",
+            "version": "1.0.0",
+            "description": "Summarize text content using AI. Supports bullet points, paragraph, and TL;DR formats.",
+            "category": "data_transform",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": "Text content to summarize"
+                    },
+                    "format": {
+                        "type": "string",
+                        "description": "Output format: bullets, paragraph, tldr",
+                        "default": "paragraph"
+                    },
+                    "max_length": {
+                        "type": "integer",
+                        "description": "Approximate max output length in characters",
+                        "default": 500
+                    }
+                },
+                "required": [
+                    "text"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "summary": {
+                        "type": "string"
+                    },
+                    "format": {
+                        "type": "string"
+                    },
+                    "input_length": {
+                        "type": "integer"
+                    },
+                    "output_length": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        {
+            "name": "fetch_rss_feed",
+            "version": "1.0.0",
+            "description": "Fetch and parse an RSS or Atom feed. Returns structured feed items with title, link, date, content, and author.",
+            "category": "data_fetch",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "RSS/Atom feed URL"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of items to return",
+                        "default": 10
+                    }
+                },
+                "required": [
+                    "url"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "type": "array"
+                    },
+                    "itemCount": {
+                        "type": "integer"
+                    },
+                    "feedUrl": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "read_google_sheet",
+            "version": "1.0.0",
+            "description": "Read data from a Google Sheets spreadsheet range.",
+            "category": "data_fetch",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "spreadsheetId": {
+                        "type": "string",
+                        "description": "Google Sheet ID (from the spreadsheet URL)"
+                    },
+                    "range": {
+                        "type": "string",
+                        "description": "A1 notation range (e.g. Sheet1!A1:D10)"
+                    }
+                },
+                "required": [
+                    "spreadsheetId",
+                    "range"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "values": {
+                        "type": "array"
+                    },
+                    "rowCount": {
+                        "type": "integer"
+                    },
+                    "columnCount": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        {
+            "name": "write_google_sheet",
+            "version": "1.0.0",
+            "description": "Write (overwrite) data to a Google Sheets spreadsheet range.",
+            "category": "data_transform",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "spreadsheetId": {
+                        "type": "string",
+                        "description": "Google Sheet ID (from the spreadsheet URL)"
+                    },
+                    "range": {
+                        "type": "string",
+                        "description": "A1 notation range to write to"
+                    },
+                    "values": {
+                        "type": "array",
+                        "description": "2D array of values to write"
+                    }
+                },
+                "required": [
+                    "spreadsheetId",
+                    "range",
+                    "values"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "updatedRange": {
+                        "type": "string"
+                    },
+                    "updatedCells": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        {
+            "name": "append_google_sheet",
+            "version": "1.0.0",
+            "description": "Append rows to the end of a Google Sheets spreadsheet.",
+            "category": "data_transform",
+            "mcpExposable": true,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "spreadsheetId": {
+                        "type": "string",
+                        "description": "Google Sheet ID (from the spreadsheet URL)"
+                    },
+                    "range": {
+                        "type": "string",
+                        "description": "A1 notation range (rows will be appended after last row)"
+                    },
+                    "values": {
+                        "type": "array",
+                        "description": "2D array of rows to append"
+                    }
+                },
+                "required": [
+                    "spreadsheetId",
+                    "range",
+                    "values"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "updatedRange": {
+                        "type": "string"
+                    },
+                    "updatedRows": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        {
+            "name": "send_gmail",
+            "version": "1.0.0",
+            "description": "Send an email via user's own Gmail account (requires Google OAuth connection). Better than send_email when user has connected Google.",
+            "category": "notification",
+            "mcpExposable": true,
+            "requiresOAuth": "google",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "to": {
+                        "type": "string",
+                        "description": "Recipient email address"
+                    },
+                    "subject": {
+                        "type": "string",
+                        "description": "Email subject line"
+                    },
+                    "body": {
+                        "type": "string",
+                        "description": "Email body content (plain text or HTML)"
+                    },
+                    "cc": {
+                        "type": "string",
+                        "description": "CC recipients (comma-separated, optional)"
+                    },
+                    "bcc": {
+                        "type": "string",
+                        "description": "BCC recipients (comma-separated, optional)"
+                    },
+                    "html": {
+                        "type": "boolean",
+                        "description": "If true, body is treated as HTML",
+                        "default": false
+                    }
+                },
+                "required": [
+                    "to",
+                    "subject",
+                    "body"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "sent": {
+                        "type": "boolean"
+                    },
+                    "messageId": {
+                        "type": "string"
+                    },
+                    "threadId": {
+                        "type": "string"
+                    },
+                    "to": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "upload_to_drive",
+            "version": "1.0.0",
+            "description": "Upload a file to user's Google Drive (requires Google OAuth connection).",
+            "category": "action",
+            "mcpExposable": true,
+            "requiresOAuth": "google",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "fileName": {
+                        "type": "string",
+                        "description": "Name for the uploaded file"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "File content (text, JSON, etc.)"
+                    },
+                    "mimeType": {
+                        "type": "string",
+                        "description": "MIME type of the file",
+                        "default": "text/plain"
+                    },
+                    "folderId": {
+                        "type": "string",
+                        "description": "Google Drive folder ID (optional, defaults to root)"
+                    }
+                },
+                "required": [
+                    "fileName",
+                    "content"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "uploaded": {
+                        "type": "boolean"
+                    },
+                    "fileId": {
+                        "type": "string"
+                    },
+                    "fileName": {
+                        "type": "string"
+                    },
+                    "webViewLink": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "list_drive_files",
+            "version": "1.0.0",
+            "description": "List files in user's Google Drive (requires Google OAuth connection).",
+            "category": "data_fetch",
+            "mcpExposable": true,
+            "requiresOAuth": "google",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "folderId": {
+                        "type": "string",
+                        "description": "Google Drive folder ID (optional, defaults to root)"
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Search query using Drive search syntax"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of files to return",
+                        "default": 20
+                    }
+                },
+                "required": []
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "files": {
+                        "type": "array"
+                    },
+                    "totalFiles": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        {
+            "name": "create_calendar_event",
+            "version": "1.0.0",
+            "description": "Create an event in user's Google Calendar (requires Google OAuth connection).",
+            "category": "action",
+            "mcpExposable": true,
+            "requiresOAuth": "google",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Event title/summary"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Event description (optional)"
+                    },
+                    "startTime": {
+                        "type": "string",
+                        "description": "Event start time in ISO 8601 format (e.g. 2024-03-15T10:00:00)"
+                    },
+                    "endTime": {
+                        "type": "string",
+                        "description": "Event end time in ISO 8601 (optional, defaults to 1 hour after start)"
+                    },
+                    "location": {
+                        "type": "string",
+                        "description": "Event location (optional)"
+                    },
+                    "attendees": {
+                        "type": "array",
+                        "description": "Array of attendee email addresses (optional)"
+                    }
+                },
+                "required": [
+                    "title",
+                    "startTime"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "created": {
+                        "type": "boolean"
+                    },
+                    "eventId": {
+                        "type": "string"
+                    },
+                    "htmlLink": {
+                        "type": "string"
+                    },
+                    "startTime": {
+                        "type": "string"
+                    },
+                    "endTime": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        {
+            "name": "list_calendar_events",
+            "version": "1.0.0",
+            "description": "List upcoming events from user's Google Calendar (requires Google OAuth connection).",
+            "category": "data_fetch",
+            "mcpExposable": true,
+            "requiresOAuth": "google",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "maxResults": {
+                        "type": "integer",
+                        "description": "Maximum number of events to return",
+                        "default": 10
+                    },
+                    "timeMin": {
+                        "type": "string",
+                        "description": "Start of time range in ISO 8601 (default: now)"
+                    },
+                    "timeMax": {
+                        "type": "string",
+                        "description": "End of time range in ISO 8601 (optional)"
+                    }
+                },
+                "required": []
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "events": {
+                        "type": "array"
+                    },
+                    "totalEvents": {
+                        "type": "integer"
+                    }
+                }
+            }
         }
     ]
 }

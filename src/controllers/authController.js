@@ -1,5 +1,6 @@
 import { db } from '../config/firebase.js';
 import authService from '../services/authService.js';
+import googleOAuth from '../services/googleOAuth.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -194,6 +195,134 @@ const authController = {
                 user
             });
 
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    // ─── Google OAuth Endpoints ─────────────────────────────────────────
+
+    /**
+     * Start Google Sign-in flow
+     * GET /auth/google/login
+     */
+    googleLogin: async (req, res, next) => {
+        try {
+            const url = googleOAuth.getLoginUrl();
+            res.json({ url });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Google OAuth callback (handles both login and connect)
+     * GET /auth/google/callback
+     */
+    googleCallback: async (req, res, next) => {
+        try {
+            const { code, state: stateParam } = req.query;
+
+            if (!code) {
+                return res.status(400).json({ error: 'Missing authorization code' });
+            }
+
+            const { tokens, state, userInfo } = await googleOAuth.handleCallback(code, stateParam);
+
+            if (state.purpose === 'login') {
+                // ─── Google Sign-in / Sign-up ────────────────────────
+                let userId;
+
+                // Check if user exists by email
+                const userSnapshot = await db.collection('users')
+                    .where('email', '==', userInfo.email).get();
+
+                if (!userSnapshot.empty) {
+                    // Existing user — log them in
+                    userId = userSnapshot.docs[0].id;
+                    logger.info('Google Sign-in: existing user', { userId, email: userInfo.email });
+                } else {
+                    // New user — create account
+                    const newUser = {
+                        email: userInfo.email,
+                        name: userInfo.name || null,
+                        picture: userInfo.picture || null,
+                        google_id: userInfo.id,
+                        auth_provider: 'google',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    };
+                    const docRef = await db.collection('users').add(newUser);
+                    userId = docRef.id;
+                    logger.info('Google Sign-in: new user created', { userId, email: userInfo.email });
+                }
+
+                // Store Google tokens for API access
+                await googleOAuth.storeUserTokens(userId, tokens, tokens.scope?.split(' '));
+
+                // Generate JWT
+                const jwt = authService.generateToken(userId);
+
+                // Redirect to frontend with token
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+                return res.redirect(`${frontendUrl}/dashboard?token=${jwt}&google=true`);
+
+            } else if (state.purpose === 'connect') {
+                // ─── Connect Google APIs to existing account ─────────
+                const userId = state.userId;
+                if (!userId) {
+                    return res.status(400).json({ error: 'Missing userId in state' });
+                }
+
+                await googleOAuth.storeUserTokens(userId, tokens, tokens.scope?.split(' '));
+
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+                return res.redirect(`${frontendUrl}/dashboard/settings?connected=google`);
+
+            } else {
+                return res.status(400).json({ error: 'Unknown OAuth purpose' });
+            }
+
+        } catch (error) {
+            logger.error('Google OAuth callback error', { error: error.message });
+            next(error);
+        }
+    },
+
+    /**
+     * Start Google API connect flow (for existing authenticated users)
+     * GET /auth/google/connect
+     * Requires auth middleware
+     */
+    googleConnect: async (req, res, next) => {
+        try {
+            const userId = req.user.id;
+            const { scopes } = req.query;
+
+            // Default to all API scopes if not specified
+            let requestedScopes = googleOAuth.ALL_API_SCOPES;
+            if (scopes) {
+                const scopeMap = googleOAuth.GOOGLE_SCOPES;
+                requestedScopes = scopes.split(',').flatMap(s => scopeMap[s.toUpperCase()] || []);
+            }
+
+            const url = googleOAuth.getAuthUrl(userId, requestedScopes, 'connect');
+            res.json({ url });
+
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Check Google connection status
+     * GET /auth/google/status
+     * Requires auth middleware
+     */
+    googleStatus: async (req, res, next) => {
+        try {
+            const status = await googleOAuth.getConnectionStatus(req.user.id);
+            res.json(status);
         } catch (error) {
             next(error);
         }
