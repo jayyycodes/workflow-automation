@@ -393,24 +393,22 @@ workflow-automation/
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contact & Collaboration
 
-Contributions welcome! Areas to explore:
-- [ ] Twitter/X integration
-- [ ] Webhook triggers
-- [ ] Custom tool builder UI
-- [ ] MCP authentication (OAuth2)
-- [ ] More Google integrations (Docs, Meet)
+This project is proprietary and not open for public contributions at this time.
+
+For business inquiries, partnerships, or collaboration:
+- GitHub: [@jayyycodes](https://github.com/jayyycodes)
 
 ---
 
 ## 📄 License
 
-**MIT License** — Copyright (c) 2025 [@jayyycodes](https://github.com/jayyycodes)
+Copyright (c) 2026 Jaydatta Kshirsagar. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, subject to the following conditions:
-
-**The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.**
+This source code is publicly visible for evaluation and portfolio purposes only.
+Commercial use, redistribution, or derivative works require explicit written
+permission from the author.
 
 ---
 
