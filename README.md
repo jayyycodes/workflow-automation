@@ -434,8 +434,6 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 Built with ❤️ by [@jayyycodes](https://github.com/jayyycodes)
 
-Contributor: [@Atharva-Sarn](https://github.com/Atharva-Sarn)
-
 [![GitHub](https://img.shields.io/badge/GitHub-jayyycodes-181717?style=for-the-badge&logo=github)](https://github.com/jayyycodes/workflow-automation)
 
 </div>
