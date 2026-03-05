@@ -245,6 +245,31 @@ Input: "Track Apple stock and SMS me if it drops below $150"
   ]
 }}
 
+EXAMPLE 3b — Gold/Commodity price (use fetch_stock_price, NOT crypto):
+Input: "Track gold price every minute and save to Google Sheet"
+{{
+  "name": "Gold Price Tracker",
+  "description": "Track gold price via Yahoo Finance and save to Google Sheets",
+  "trigger": {{"type": "interval", "every": "1m"}},
+  "steps": [
+    {{"type": "fetch_stock_price", "symbol": "GOLD"}},
+    {{"type": "append_google_sheet", "range": "Sheet1!A1", "values": [["{{{{step_1.symbol}}}}", "{{{{step_1.price}}}}", "{{{{step_1.currency}}}}", "{{{{step_1.timestamp}}}}"]]}}
+  ]
+}}
+IMPORTANT: Gold, Silver, and commodities use fetch_stock_price (Yahoo Finance), NOT fetch_crypto_price. Symbol mappings: GOLD, SILVER, NIFTY, SENSEX.
+
+EXAMPLE 3c — Crypto price:
+Input: "Track Bitcoin price every 2 minutes and save to sheet"
+{{
+  "name": "Bitcoin Price Tracker",
+  "description": "Track Bitcoin price and save to Google Sheets",
+  "trigger": {{"type": "interval", "every": "2m"}},
+  "steps": [
+    {{"type": "fetch_crypto_price", "symbol": "BTC"}},
+    {{"type": "append_google_sheet", "range": "Sheet1!A1", "values": [["{{{{step_1.symbol}}}}", "{{{{step_1.price}}}}", "{{{{step_1.changePercent}}}}", "{{{{step_1.timestamp}}}}"]]}}
+  ]
+}}
+
 EXAMPLE 4 — RSS + AI summarize + email:
 Input: "Summarize new TechCrunch articles and email me"
 {{

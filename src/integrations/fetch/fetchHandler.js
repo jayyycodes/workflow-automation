@@ -143,18 +143,22 @@ const marketProviders = {
 };
 
 /**
- * Crypto providers
+ * Crypto providers — CoinGecko primary, CoinCap fallback (both free, no API key)
  */
 const cryptoProviders = {
     /**
-     * CoinGecko (Free, no API key!)
+     * CoinGecko (Free, no API key — 10-30 req/min limit)
      */
     coingecko: async (identifier) => {
         const coinMap = {
-            'BTC': 'bitcoin',
-            'ETH': 'ethereum',
-            'SOL': 'solana',
-            'USDT': 'tether'
+            'BTC': 'bitcoin', 'BITCOIN': 'bitcoin',
+            'ETH': 'ethereum', 'ETHEREUM': 'ethereum',
+            'SOL': 'solana', 'SOLANA': 'solana',
+            'USDT': 'tether', 'TETHER': 'tether',
+            'BNB': 'binancecoin', 'XRP': 'ripple',
+            'ADA': 'cardano', 'DOGE': 'dogecoin',
+            'DOT': 'polkadot', 'MATIC': 'matic-network',
+            'AVAX': 'avalanche-2', 'LINK': 'chainlink'
         };
 
         const coinId = coinMap[identifier.toUpperCase()] || identifier.toLowerCase();
@@ -169,7 +173,7 @@ const cryptoProviders = {
         const priceData = data[coinId];
 
         if (!priceData) {
-            throw new Error(`Crypto ${identifier} not found`);
+            throw new Error(`Crypto ${identifier} not found on CoinGecko`);
         }
 
         return {
@@ -180,8 +184,54 @@ const cryptoProviders = {
             provider: 'coingecko',
             timestamp: new Date().toISOString()
         };
+    },
+
+    /**
+     * CoinCap (Free, no API key — generous rate limits)
+     */
+    coincap: async (identifier) => {
+        const coinMap = {
+            'BTC': 'bitcoin', 'BITCOIN': 'bitcoin',
+            'ETH': 'ethereum', 'ETHEREUM': 'ethereum',
+            'SOL': 'solana', 'SOLANA': 'solana',
+            'USDT': 'tether', 'TETHER': 'tether',
+            'BNB': 'binance-coin', 'XRP': 'xrp',
+            'ADA': 'cardano', 'DOGE': 'dogecoin',
+            'DOT': 'polkadot', 'MATIC': 'polygon',
+            'AVAX': 'avalanche', 'LINK': 'chainlink'
+        };
+
+        const coinId = coinMap[identifier.toUpperCase()] || identifier.toLowerCase();
+        const url = `https://api.coincap.io/v2/assets/${coinId}`;
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`CoinCap API error: ${response.status}`);
+        }
+
+        const json = await response.json();
+        const coin = json.data;
+
+        if (!coin) {
+            throw new Error(`Crypto ${identifier} not found on CoinCap`);
+        }
+
+        const price = parseFloat(coin.priceUsd);
+        const change24h = parseFloat(coin.changePercent24Hr) || 0;
+
+        return {
+            symbol: identifier.toUpperCase(),
+            price: price.toFixed(2),
+            change24h: change24h.toFixed(2),
+            changePercent: `${change24h.toFixed(2)}%`,
+            provider: 'coincap',
+            timestamp: new Date().toISOString()
+        };
     }
 };
+
+// Provider fallback order for crypto
+const CRYPTO_FALLBACK_ORDER = ['coingecko', 'coincap'];
 
 /**
  * Generic Fetch Data Handler
@@ -201,6 +251,22 @@ export const fetchData = async (params, context) => {
         switch (source) {
             case 'market':
             case 'stock':
+            case 'gold':
+            case 'commodity':
+            case 'commodities': {
+                // Auto-map source names to identifiers when no identifier given
+                let effectiveIdentifier = identifier;
+                if (!effectiveIdentifier) {
+                    const sourceToSymbol = { 'gold': 'GOLD', 'commodity': 'GOLD', 'commodities': 'GOLD' };
+                    effectiveIdentifier = sourceToSymbol[source];
+                    if (effectiveIdentifier) {
+                        logger.info(`Auto-mapped source "${source}" to identifier "${effectiveIdentifier}"`);
+                    }
+                }
+                if (!effectiveIdentifier) {
+                    throw new Error(`fetch_data: "identifier" (symbol) is required for ${source} data`);
+                }
+
                 // Default to Yahoo Finance (free, no key needed)
                 const selectedMarketProvider = provider || 'yahoo';
 
@@ -208,17 +274,30 @@ export const fetchData = async (params, context) => {
                     throw new Error(`Unknown market provider: ${selectedMarketProvider}`);
                 }
 
-                return await marketProviders[selectedMarketProvider](identifier, apiKey);
+                return await marketProviders[selectedMarketProvider](effectiveIdentifier, apiKey);
+            }
 
-            case 'crypto':
-                // Default to CoinGecko (free, no key needed)
-                const selectedCryptoProvider = provider || 'coingecko';
-
-                if (!cryptoProviders[selectedCryptoProvider]) {
-                    throw new Error(`Unknown crypto provider: ${selectedCryptoProvider}`);
+            case 'crypto': {
+                // If specific provider requested, try just that one
+                if (provider && cryptoProviders[provider]) {
+                    return await cryptoProviders[provider](identifier);
                 }
 
-                return await cryptoProviders[selectedCryptoProvider](identifier);
+                // Otherwise try all providers in fallback order
+                let lastError;
+                for (const providerName of CRYPTO_FALLBACK_ORDER) {
+                    try {
+                        logger.info(`Trying crypto provider: ${providerName}`, { identifier });
+                        const result = await cryptoProviders[providerName](identifier);
+                        return result;
+                    } catch (err) {
+                        lastError = err;
+                        const isRateLimit = err.message.includes('429');
+                        logger.warn(`${providerName} failed${isRateLimit ? ' (rate limited)' : ''}: ${err.message}, trying next...`);
+                    }
+                }
+                throw lastError || new Error(`All crypto providers failed for ${identifier}`);
+            }
 
             default:
                 throw new Error(`Unsupported source: ${source}. Supported: market, crypto`);
@@ -243,12 +322,12 @@ export const fetchStockPrice = async (params, context) => {
 
 /**
  * Backward compatibility: fetch_crypto_price
+ * Uses auto-fallback: CoinGecko → CoinCap
  */
 export const fetchCryptoPrice = async (params, context) => {
     return fetchData({
         source: 'crypto',
-        identifier: params.symbol,
-        provider: params.provider || 'coingecko'
+        identifier: params.symbol
     }, context);
 };
 
